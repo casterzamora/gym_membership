@@ -3,35 +3,28 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Attendance extends Model
 {
-    use HasFactory;
+    protected $table = 'attendance';
+    public $incrementing = false;
+    public $timestamps = true;
+    protected $primaryKey = ['member_id', 'schedule_id'];
 
-    protected $fillable = [
-        'member_id',
-        'check_in_time',
-        'check_out_time',
-        'date',
-    ];
+    protected $fillable = ['member_id', 'schedule_id', 'attendance_status', 'recorded_at'];
 
     protected $casts = [
-        'check_in_time' => 'datetime',
-        'check_out_time' => 'datetime',
-        'date' => 'date',
+        'recorded_at' => 'datetime',
     ];
 
-    public function member()
+    public function member(): BelongsTo
     {
         return $this->belongsTo(Member::class);
     }
 
-    public function getDurationAttribute()
+    public function schedule(): BelongsTo
     {
-        if ($this->check_out_time && $this->check_in_time) {
-            return $this->check_out_time->diffInMinutes($this->check_in_time);
-        }
-        return null;
+        return $this->belongsTo(ClassSchedule::class, 'schedule_id');
     }
 }

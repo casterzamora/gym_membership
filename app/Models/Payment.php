@@ -3,34 +3,24 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Payment extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
-        'member_id',
-        'membership_id',
-        'amount',
-        'payment_date',
-        'payment_method', // cash, card, transfer
-        'status', // pending, completed, failed
-        'transaction_id',
+        'member_id', 'amount_paid', 'payment_date', 'payment_method',
+        'coverage_start', 'coverage_end', 'status'
     ];
 
     protected $casts = [
+        'amount_paid' => 'decimal:2',
         'payment_date' => 'date',
-        'amount' => 'decimal:2',
+        'coverage_start' => 'date',
+        'coverage_end' => 'date',
     ];
 
-    public function member()
+    public function member(): BelongsTo
     {
         return $this->belongsTo(Member::class);
-    }
-
-    public function membership()
-    {
-        return $this->belongsTo(Membership::class);
     }
 }
