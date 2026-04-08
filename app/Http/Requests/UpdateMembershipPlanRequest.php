@@ -18,6 +18,7 @@ class UpdateMembershipPlanRequest extends FormRequest
             'price' => 'sometimes|numeric|min:0|max:99999.99',
             'duration_months' => 'sometimes|integer|min:1|max:60',
             'description' => 'nullable|string|max:1000',
+            'max_classes_per_week' => 'nullable|integer|min:1|max:50',
         ];
     }
 }

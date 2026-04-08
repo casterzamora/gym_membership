@@ -14,9 +14,9 @@ class UpdatePaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'amount' => 'sometimes|numeric|min:0.01|max:99999.99',
+            'amount_paid' => 'sometimes|numeric|min:0.01|max:99999.99',
             'payment_date' => 'sometimes|date',
-            'payment_method' => 'sometimes|in:cash,card,transfer,check',
+            'payment_method_id' => 'sometimes|exists:payment_methods,payment_method_id',
             'coverage_start' => 'sometimes|date',
             'coverage_end' => 'sometimes|date|after:coverage_start',
         ];

@@ -3,6 +3,7 @@ import { DataTable, FormModal, FormInput, ConfirmDialog, Button } from '@/compon
 import api from '@/services/api';
 import toast from 'react-hot-toast';
 import { Plus } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const TrainersManagement = () => {
   const [trainers, setTrainers] = useState([]);
@@ -14,6 +15,7 @@ const TrainersManagement = () => {
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
+    email: '',
     specialization: '',
     phone: '',
     hourly_rate: '',
@@ -28,9 +30,12 @@ const TrainersManagement = () => {
     try {
       setLoading(true);
       const response = await api.trainersAPI.list();
+      console.log('Trainers fetched:', response.data);
       setTrainers(response.data.data || response.data || []);
     } catch (err) {
+      console.error('Failed to load trainers:', err);
       toast.error('Failed to load trainers');
+      setTrainers([]);
     } finally {
       setLoading(false);
     }
@@ -42,6 +47,7 @@ const TrainersManagement = () => {
       setFormData({
         first_name: trainer.first_name || '',
         last_name: trainer.last_name || '',
+        email: trainer.email || '',
         specialization: trainer.specialization || '',
         phone: trainer.phone || '',
         hourly_rate: trainer.hourly_rate || '',
@@ -51,6 +57,7 @@ const TrainersManagement = () => {
       setFormData({
         first_name: '',
         last_name: '',
+        email: '',
         specialization: '',
         phone: '',
         hourly_rate: '',
@@ -66,6 +73,7 @@ const TrainersManagement = () => {
     setFormData({
       first_name: '',
       last_name: '',
+      email: '',
       specialization: '',
       phone: '',
       hourly_rate: '',
@@ -77,6 +85,8 @@ const TrainersManagement = () => {
     const newErrors = {};
     if (!formData.first_name.trim()) newErrors.first_name = 'First name is required';
     if (!formData.last_name.trim()) newErrors.last_name = 'Last name is required';
+    if (!formData.email.trim()) newErrors.email = 'Email is required';
+    if (formData.email.trim() && !formData.email.includes('@')) newErrors.email = 'Valid email is required';
     if (!formData.specialization.trim()) newErrors.specialization = 'Specialization is required';
     if (!formData.phone.trim()) newErrors.phone = 'Phone is required';
     if (!formData.hourly_rate || formData.hourly_rate <= 0) newErrors.hourly_rate = 'Valid hourly rate is required';
@@ -92,16 +102,20 @@ const TrainersManagement = () => {
     try {
       setLoading(true);
       if (editingTrainer) {
+        console.log('Updating trainer:', editingTrainer.id);
         await api.trainersAPI.update(editingTrainer.id, formData);
         toast.success('Trainer updated successfully');
       } else {
+        console.log('Creating new trainer');
         await api.trainersAPI.create(formData);
         toast.success('Trainer created successfully');
       }
       handleCloseModal();
       fetchTrainers();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Operation failed');
+      console.error('Submit error:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Operation failed';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -115,13 +129,17 @@ const TrainersManagement = () => {
   const confirmDelete = async () => {
     try {
       setLoading(true);
-      await api.trainersAPI.delete(trainerToDelete.id);
+      console.log('Deleting trainer:', trainerToDelete.id);
+      const response = await api.trainersAPI.delete(trainerToDelete.id);
+      console.log('Delete response:', response);
       toast.success('Trainer deleted successfully');
       setIsConfirmOpen(false);
       setTrainerToDelete(null);
       fetchTrainers();
     } catch (err) {
-      toast.error('Failed to delete trainer');
+      console.error('Delete error:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to delete trainer';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -133,19 +151,24 @@ const TrainersManagement = () => {
     { key: 'last_name', label: 'Last Name' },
     { key: 'specialization', label: 'Specialization' },
     { key: 'phone', label: 'Phone' },
-    { key: 'hourly_rate', label: 'Hourly Rate', render: (value) => `$${value}` },
+    { key: 'hourly_rate', label: 'Hourly Rate', render: (value) => value ? `$${parseFloat(value).toFixed(2)}/hr` : '$0.00/hr' },
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Trainers Management</h1>
-        <Button onClick={() => handleOpenModal()} className="flex items-center gap-2">
-          <Plus size={20} />
-          Add Trainer
-        </Button>
-      </div>
+    <div className="space-y-8">
+      {/* Header with Action Button */}
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-white">Trainers Management</h1>
+          <Button onClick={() => handleOpenModal()} className="flex items-center gap-2">
+            <Plus size={20} />
+            Add Trainer
+          </Button>
+        </div>
+      </motion.div>
 
+      {/* Data Table */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
       <DataTable
         columns={columns}
         data={trainers}
@@ -155,6 +178,7 @@ const TrainersManagement = () => {
         onEdit={handleOpenModal}
         onDelete={handleDelete}
       />
+      </motion.div>
 
       <FormModal
         isOpen={isModalOpen}
@@ -176,6 +200,15 @@ const TrainersManagement = () => {
           value={formData.last_name}
           onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
           error={errors.last_name}
+          required
+        />
+        <FormInput
+          label="Email"
+          type="email"
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          error={errors.email}
+          placeholder="e.g., trainer@gym.com"
           required
         />
         <FormInput

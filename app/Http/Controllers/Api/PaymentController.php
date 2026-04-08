@@ -17,7 +17,7 @@ class PaymentController extends Controller
      */
     public function index()
     {
-        $payments = Payment::with('member')->paginate(15);
+        $payments = Payment::with('member', 'paymentMethod')->paginate(15);
         return $this->paginated($payments, 'Payments retrieved successfully');
     }
 
@@ -28,7 +28,7 @@ class PaymentController extends Controller
     {
         try {
             $payment = Payment::create($request->validated());
-            return $this->success($payment->load('member'), 'Payment recorded successfully', 201);
+            return $this->success($payment->load('member', 'paymentMethod'), 'Payment recorded successfully', 201);
         } catch (\Exception $e) {
             return $this->error('Failed to record payment: ' . $e->getMessage(), null, 500);
         }
@@ -39,7 +39,7 @@ class PaymentController extends Controller
      */
     public function show(Payment $payment)
     {
-        return $this->success($payment->load('member'), 'Payment retrieved successfully');
+        return $this->success($payment->load('member', 'paymentMethod'), 'Payment retrieved successfully');
     }
 
     /**
@@ -49,7 +49,7 @@ class PaymentController extends Controller
     {
         try {
             $payment->update($request->validated());
-            return $this->success($payment->load('member'), 'Payment updated successfully');
+            return $this->success($payment->load('member', 'paymentMethod'), 'Payment updated successfully');
         } catch (\Exception $e) {
             return $this->error('Failed to update payment: ' . $e->getMessage(), null, 500);
         }

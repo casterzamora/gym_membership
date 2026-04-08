@@ -10,7 +10,7 @@ import { Button, StatCard, Card, Badge, LoadingSpinner } from '@/components'
 export default function Dashboard() {
   const { user, loading: authLoading } = useContext(AuthContext)
   const [memberData, setMemberData] = useState(null)
-  const [upcomingClasses, setUpcomingClasses] = useState([])
+  const [todaysSchedule, setTodaysSchedule] = useState([])
   const [stats, setStats] = useState({ totalAttendance: 0, thisMonth: 0, streak: 0 })
   const [chartData, setChartData] = useState([])
   const [loading, setLoading] = useState(true)
@@ -18,15 +18,10 @@ export default function Dashboard() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate('/login')
-      return
-    }
-    
     if (user) {
       fetchDashboardData()
     }
-  }, [user, authLoading])
+  }, [user])
 
   const fetchDashboardData = async () => {
     try {
@@ -36,17 +31,23 @@ export default function Dashboard() {
       const memberRes = await membersAPI.get(user.id)
       setMemberData(memberRes.data.data)
 
-      // Get upcoming class schedules
+      // Get today's class schedules
       const schedulesRes = await schedulesAPI.list()
       if (schedulesRes.data?.data) {
-        // Filter for future schedules
-        const futureSchedules = schedulesRes.data.data.filter(s => {
+        // Filter for today's schedules only
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const tomorrow = new Date(today)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+        
+        const todaySchedules = schedulesRes.data.data.filter(s => {
           const dateStr = s.class_date || s.schedule_date
           if (!dateStr) return false
           const scheduleDate = new Date(dateStr)
-          return scheduleDate > new Date()
-        }).slice(0, 6)
-        setUpcomingClasses(futureSchedules)
+          scheduleDate.setHours(0, 0, 0, 0)
+          return scheduleDate.getTime() === today.getTime()
+        })
+        setTodaysSchedule(todaySchedules)
       }
 
       // Get attendance records for this member
@@ -220,19 +221,19 @@ export default function Dashboard() {
           </Card>
         </motion.div>
 
-        {/* Upcoming Classes */}
+        {/* Today's Schedule */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-3xl font-bold text-white">Upcoming Classes</h2>
+            <h2 className="text-3xl font-bold text-white">Today's Schedule</h2>
             <Button variant="secondary" size="sm" onClick={() => navigate('/classes')}>
-              View All <ArrowRight size={16} />
+              Browse Classes <ArrowRight size={16} />
             </Button>
           </div>
 
-          {upcomingClasses.length === 0 ? (
+          {todaysSchedule.length === 0 ? (
             <Card className="text-center py-12">
               <Calendar size={48} className="mx-auto text-gold-bright/30 mb-4" />
-              <p className="text-gray-400 mb-4">No upcoming classes scheduled</p>
+              <p className="text-gray-400 mb-4">No classes scheduled for today</p>
               <Button onClick={() => navigate('/classes')}>Browse Classes</Button>
             </Card>
           ) : (
@@ -248,7 +249,7 @@ export default function Dashboard() {
                 },
               }}
             >
-              {upcomingClasses.map((schedule, i) => (
+              {todaysSchedule.map((schedule, i) => (
                 <motion.div
                   key={schedule.id}
                   variants={{
@@ -295,8 +296,8 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-                    <Button variant="primary" className="w-full mt-4" size="sm">
-                      Enroll Now
+                    <Button variant="primary" className="w-full mt-4" size="sm" onClick={() => navigate('/classes')}>
+                      View Details
                     </Button>
                   </Card>
                 </motion.div>

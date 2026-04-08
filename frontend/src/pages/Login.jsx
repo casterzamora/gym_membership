@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { AuthContext } from '@/context/AuthContext'
 import { authAPI } from '@/services/api'
 import { motion } from 'framer-motion'
-import { Eye, EyeOff, LogIn, AlertCircle, CheckCircle } from 'lucide-react'
+import { Eye, EyeOff, LogIn, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react'
 import { Button, Card } from '@/components'
 import toast from 'react-hot-toast'
 
@@ -19,7 +19,7 @@ export default function Login() {
   const navigate = useNavigate()
 
   const handleDemoLogin = () => {
-    setEmail('admin@gym.com')
+    setEmail('demo@gym.com')
     setPassword('password')
   }
 
@@ -42,24 +42,26 @@ export default function Login() {
       if (response.data.success) {
         setSuccess('Login successful! Redirecting...')
         toast.success('Welcome back!')
-        const user = response.data.data.user
+        // Handle both member and user response formats
+        const member = response.data.data.member || response.data.data.user
         const token = response.data.data.token
-        console.log(`Login succeeded for ${user.email} (${user.role})`)
+        const memberName = member.first_name ? `${member.first_name} ${member.last_name}` : member.name
+        console.log(`Login succeeded for ${member.email} (${memberName}), role should be: member`)
         
-        // Call login to update AuthContext
-        login(user, token)
+        // Call login to update AuthContext synchronously
+        console.log('Calling AuthContext.login...')
+        login(member, token)
+        console.log('AuthContext.login completed, checking context state...')
         
-        // Redirect based on user role - give React time to process state updates
-        const redirectPath = user.role === 'admin' ? '/admin/dashboard' 
-                            : user.role === 'trainer' ? '/trainer/dashboard' 
-                            : '/dashboard'
-        console.log(`Redirecting to ${redirectPath}`)
+        // All members go to dashboard - give React time to batch state updates
+        const redirectPath = '/dashboard'
+        console.log(`Will navigate to ${redirectPath}`)
         
-        // Use a slightly longer timeout to ensure AuthContext state is updated
+        // Small delay to ensure React has batched state updates
         setTimeout(() => {
-          console.log(`Performing redirect to ${redirectPath}`)
+          console.log(`Navigating to ${redirectPath}...`)
           navigate(redirectPath)
-        }, 300)
+        }, 100)
       } else {
         throw new Error(response.data.message || 'Login failed')
       }
@@ -104,6 +106,16 @@ export default function Login() {
           initial="hidden"
           animate="visible"
         >
+          {/* Back Button */}
+          <motion.button
+            variants={itemVariants}
+            onClick={() => navigate('/')}
+            className="mb-6 flex items-center gap-2 text-gray-400 hover:text-gold-bright transition group"
+          >
+            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+            <span>Back to Home</span>
+          </motion.button>
+
           {/* Logo/Header */}
           <motion.div variants={itemVariants} className="text-center mb-8">
             <motion.div 
@@ -116,7 +128,7 @@ export default function Login() {
             <h1 className="text-4xl font-black bg-gradient-to-r from-gold-bright to-accent-orange bg-clip-text text-transparent mb-2">
               Welcome Back
             </h1>
-            <p className="text-gray-400">Sign in to your Gold's Gym account</p>
+            <p className="text-gray-400">Sign in to your Elevate Gym account</p>
           </motion.div>
 
           {/* Demo Login Info */}

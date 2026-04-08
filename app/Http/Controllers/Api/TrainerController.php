@@ -17,7 +17,7 @@ class TrainerController extends Controller
      */
     public function index()
     {
-        $trainers = Trainer::with('user', 'certifications', 'classes')->paginate(15);
+        $trainers = Trainer::with('certifications', 'classes')->paginate(15);
         return $this->paginated($trainers, 'Trainers retrieved successfully');
     }
 
@@ -39,7 +39,7 @@ class TrainerController extends Controller
      */
     public function show(Trainer $trainer)
     {
-        return $this->success($trainer->load('user', 'certifications', 'classes'), 'Trainer retrieved successfully');
+        return $this->success($trainer->load('certifications', 'classes'), 'Trainer retrieved successfully');
     }
 
     /**

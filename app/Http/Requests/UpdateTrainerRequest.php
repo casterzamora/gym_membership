@@ -19,7 +19,7 @@ class UpdateTrainerRequest extends FormRequest
             'email' => 'sometimes|email|unique:trainers,email,' . $this->trainer->id,
             'phone' => 'sometimes|string|max:20',
             'specialization' => 'sometimes|string|max:255',
-            'hourly_rate' => 'sometimes|numeric|min:0|max:999.99',
+            'hourly_rate' => 'sometimes|numeric|min:0',
         ];
     }
 }

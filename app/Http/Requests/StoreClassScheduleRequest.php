@@ -15,10 +15,11 @@ class StoreClassScheduleRequest extends FormRequest
     {
         return [
             'class_id' => 'required|exists:fitness_classes,id',
-            'scheduled_date' => 'required|date|after_or_equal:today',
+            'class_date' => 'required|date|after_or_equal:today',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
-            'location' => 'required|string|max:255',
+            'recurrence_type' => 'nullable|string|max:50',
+            'recurrence_end_date' => 'nullable|date|after:class_date',
         ];
     }
 }

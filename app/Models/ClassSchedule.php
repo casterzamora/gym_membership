@@ -9,10 +9,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class ClassSchedule extends Model
 {
     protected $table = 'class_schedules';
-    protected $fillable = ['class_id', 'class_date', 'start_time', 'end_time'];
+    protected $fillable = ['class_id', 'class_date', 'start_time', 'end_time', 'recurrence_type', 'recurrence_end_date'];
 
     protected $casts = [
         'class_date' => 'date',
+        'recurrence_end_date' => 'date',
     ];
 
     public function fitnessClass(): BelongsTo

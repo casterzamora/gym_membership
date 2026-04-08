@@ -19,14 +19,16 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!authLoading && !user) {
+      console.log('Dashboard: No user detected, redirecting to login')
       navigate('/login')
       return
     }
     
     if (user) {
+      console.log('Dashboard: User detected, fetching data for:', user.displayName || user.email)
       fetchDashboardData()
     }
-  }, [user, authLoading])
+  }, [user, authLoading, navigate])
 
   const fetchDashboardData = async () => {
     try {

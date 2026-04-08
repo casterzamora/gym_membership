@@ -3,12 +3,18 @@ import { useNavigate, Link } from 'react-router-dom'
 import { AuthContext } from '@/context/AuthContext'
 import { authAPI, plansAPI } from '@/services/api'
 import { motion } from 'framer-motion'
-import { AlertCircle, CheckCircle } from 'lucide-react'
+import { AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function Register() {
-  const [name, setName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
+  const [dateOfBirth, setDateOfBirth] = useState('')
+  const [phone, setPhone] = useState('')
+  const [fitnessGoal, setFitnessGoal] = useState('')
+  const [healthNotes, setHealthNotes] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [planId, setPlanId] = useState('')
@@ -48,8 +54,8 @@ export default function Register() {
     e.preventDefault()
     
     // Validation
-    if (!name || !email || !password) {
-      setError('Please fill in all fields')
+    if (!firstName.trim() || !lastName.trim() || !username.trim() || !email || !password || !dateOfBirth) {
+      setError('Please fill in all required fields')
       return
     }
 
@@ -63,15 +69,26 @@ export default function Register() {
       return
     }
 
+    if (!planId) {
+      setError('Please select a membership plan')
+      return
+    }
+
     setLoading(true)
     setError('')
     setSuccess('')
 
     try {
-      console.log('Attempting registration with:', { name, email, plan_id: planId })
+      console.log('Attempting registration with:', { firstName, lastName, username, email, dateOfBirth, plan_id: planId })
       const registerResponse = await authAPI.register({
-        name,
+        first_name: firstName,
+        last_name: lastName,
+        username: username,
         email,
+        date_of_birth: dateOfBirth,
+        phone: phone || undefined,
+        fitness_goal: fitnessGoal || undefined,
+        health_notes: healthNotes || undefined,
         password,
         password_confirmation: passwordConfirm,
         plan_id: planId ? parseInt(planId) : null,
@@ -81,14 +98,14 @@ export default function Register() {
 
       if (registerResponse.data.success) {
         setSuccess('Account created successfully! Redirecting...')
-        toast.success('Welcome to GymFlow!')
-        const user = registerResponse.data.data.user
+        toast.success('Welcome to Elevate Gym!')
+        const member = registerResponse.data.data.member || registerResponse.data.data.user
         const token = registerResponse.data.data.token
         
-        console.log(`Registration succeeded for ${user.email}`)
+        console.log(`Registration succeeded for ${member.email}`)
         
         // Call login to update AuthContext
-        login(user, token)
+        login(member, token)
         
         // Redirect to dashboard
         setTimeout(() => {
@@ -150,10 +167,20 @@ export default function Register() {
           initial="hidden"
           animate="visible"
         >
+          {/* Back Button */}
+          <motion.button
+            variants={itemVariants}
+            onClick={() => navigate('/')}
+            className="mb-6 flex items-center gap-2 text-gray-400 hover:text-gold-bright transition group"
+          >
+            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+            <span>Back to Home</span>
+          </motion.button>
+
           {/* Header */}
           <motion.div variants={itemVariants} className="text-center mb-8">
             <h1 className="text-4xl font-black bg-gradient-to-r from-gold-bright to-accent-orange bg-clip-text text-transparent mb-2">
-              Join GymFlow
+              Join Elevate Gym
             </h1>
             <p className="text-gray-400">Start your fitness journey today</p>
           </motion.div>
@@ -182,18 +209,50 @@ export default function Register() {
           <motion.div variants={itemVariants}>
             <div className="bg-dark-card border border-gold-bright/20 rounded-lg p-8">
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Full Name */}
+                {/* First Name */}
                 <div>
-                  <label htmlFor="name" className="block text-sm font-bold text-gold-500 mb-2">
-                    Full Name
+                  <label htmlFor="firstName" className="block text-sm font-bold text-gold-500 mb-2">
+                    First Name
                   </label>
                   <input
-                    id="name"
+                    id="firstName"
                     type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
                     className="w-full px-4 py-3 bg-dark-secondary border border-gold-bright/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-bright transition"
-                    placeholder="John Doe"
+                    placeholder="John"
+                    required
+                  />
+                </div>
+
+                {/* Last Name */}
+                <div>
+                  <label htmlFor="lastName" className="block text-sm font-bold text-gold-500 mb-2">
+                    Last Name
+                  </label>
+                  <input
+                    id="lastName"
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className="w-full px-4 py-3 bg-dark-secondary border border-gold-bright/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-bright transition"
+                    placeholder="Doe"
+                    required
+                  />
+                </div>
+
+                {/* Username */}
+                <div>
+                  <label htmlFor="username" className="block text-sm font-bold text-gold-500 mb-2">
+                    Username
+                  </label>
+                  <input
+                    id="username"
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full px-4 py-3 bg-dark-secondary border border-gold-bright/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-bright transition"
+                    placeholder="johndoe"
                     required
                   />
                 </div>
@@ -211,6 +270,66 @@ export default function Register() {
                     className="w-full px-4 py-3 bg-dark-secondary border border-gold-bright/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-bright transition"
                     placeholder="you@example.com"
                     required
+                  />
+                </div>
+
+                {/* Date of Birth */}
+                <div>
+                  <label htmlFor="dateOfBirth" className="block text-sm font-bold text-gold-500 mb-2">
+                    Date of Birth
+                  </label>
+                  <input
+                    id="dateOfBirth"
+                    type="date"
+                    value={dateOfBirth}
+                    onChange={(e) => setDateOfBirth(e.target.value)}
+                    className="w-full px-4 py-3 bg-dark-secondary border border-gold-bright/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-bright transition"
+                    required
+                  />
+                </div>
+
+                {/* Phone (Optional) */}
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-bold text-gold-500 mb-2">
+                    Phone Number (Optional)
+                  </label>
+                  <input
+                    id="phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full px-4 py-3 bg-dark-secondary border border-gold-bright/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-bright transition"
+                    placeholder="555-123-4567"
+                  />
+                </div>
+
+                {/* Fitness Goal (Optional) */}
+                <div>
+                  <label htmlFor="fitnessGoal" className="block text-sm font-bold text-gold-500 mb-2">
+                    Fitness Goal (Optional)
+                  </label>
+                  <input
+                    id="fitnessGoal"
+                    type="text"
+                    value={fitnessGoal}
+                    onChange={(e) => setFitnessGoal(e.target.value)}
+                    className="w-full px-4 py-3 bg-dark-secondary border border-gold-bright/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-bright transition"
+                    placeholder="e.g., Weight Loss, Muscle Gain"
+                  />
+                </div>
+
+                {/* Health Notes (Optional) */}
+                <div>
+                  <label htmlFor="healthNotes" className="block text-sm font-bold text-gold-500 mb-2">
+                    Health Notes (Optional)
+                  </label>
+                  <textarea
+                    id="healthNotes"
+                    value={healthNotes}
+                    onChange={(e) => setHealthNotes(e.target.value)}
+                    className="w-full px-4 py-3 bg-dark-secondary border border-gold-bright/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-bright transition"
+                    placeholder="Any health conditions or restrictions"
+                    rows="3"
                   />
                 </div>
 
@@ -266,7 +385,7 @@ export default function Register() {
                       <option value="">-- Select a plan --</option>
                       {plans.map((plan) => (
                         <option key={plan.id} value={plan.id}>
-                          {plan.plan_name || plan.name} - ${plan.price}/month
+                          {plan.plan_name || plan.name} - PHP {plan.price}
                         </option>
                       ))}
                     </select>
@@ -280,7 +399,7 @@ export default function Register() {
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={loading || plansLoading}
+                  disabled={loading || plansLoading || plans.length === 0}
                   className="w-full px-4 py-3 bg-gradient-to-r from-gold-600 to-gold-500 text-black font-bold rounded-lg hover:from-gold-500 hover:to-gold-400 transition disabled:opacity-50 disabled:cursor-not-allowed mt-6"
                 >
                   {loading ? 'Creating Account...' : 'Create Account'}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DataTable, Badge } from '@/components';
 import api from '@/services/api';
 import toast from 'react-hot-toast';
+import { motion } from 'framer-motion';
 
 const PaymentsManagement = () => {
   const [payments, setPayments] = useState([]);
@@ -63,9 +64,14 @@ const PaymentsManagement = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-900">Payments & Billing</h1>
+    <div className="space-y-8">
+      {/* Header */}
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+        <h1 className="text-3xl font-bold text-white">Payments & Billing</h1>
+      </motion.div>
 
+      {/* Data Table */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
       <DataTable
         columns={columns}
         data={payments}
@@ -73,12 +79,14 @@ const PaymentsManagement = () => {
         loading={loading}
         searchFields={['member_id', 'payment_method']}
       />
+      </motion.div>
 
       {/* Summary Stats */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-sm font-medium text-gray-600 mb-2">Total Revenue</h3>
-          <p className="text-3xl font-bold text-gray-900">
+          <p className="text-3xl font-bold text-white">
             ${payments.reduce((sum, p) => sum + (parseFloat(p.amount_paid) || 0), 0).toFixed(2)}
           </p>
         </div>
@@ -95,6 +103,7 @@ const PaymentsManagement = () => {
           </p>
         </div>
       </div>
+      </motion.div>
     </div>
   );
 };

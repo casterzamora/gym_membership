@@ -28,7 +28,7 @@ const AdminLayout = ({ children }) => {
   const isActive = (path) => location.pathname === path;
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-dark-bg">
       {/* Sidebar */}
       <div
         className={`${
@@ -56,7 +56,7 @@ const AdminLayout = ({ children }) => {
                 to={item.path}
                 className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition ${
                   isActive(item.path)
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50'
                     : 'text-gray-300 hover:bg-gray-800'
                 }`}
                 title={!sidebarOpen ? item.name : ''}
@@ -72,13 +72,13 @@ const AdminLayout = ({ children }) => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <div className="bg-white border-b border-gray-200 p-4 shadow-sm">
+        <div className="bg-gray-900 border-b border-gray-700 p-4 shadow-sm">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-white">
               {adminMenuItems.find(item => isActive(item.path))?.name || 'Admin'}
             </h1>
             <div className="flex items-center gap-4">
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-400">
                 {user?.name} ({user?.role})
               </div>
               <button

@@ -3,6 +3,7 @@ import { DataTable, FormModal, FormInput, ConfirmDialog, Button } from '@/compon
 import api from '@/services/api';
 import toast from 'react-hot-toast';
 import { Plus } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const ClassesManagement = () => {
   const [classes, setClasses] = useState([]);
@@ -29,9 +30,12 @@ const ClassesManagement = () => {
     try {
       setLoading(true);
       const response = await api.classesAPI.list();
+      console.log('Classes fetched:', response.data);
       setClasses(response.data.data || response.data || []);
     } catch (err) {
+      console.error('Failed to load classes:', err);
       toast.error('Failed to load classes');
+      setClasses([]);
     } finally {
       setLoading(false);
     }
@@ -48,12 +52,15 @@ const ClassesManagement = () => {
 
   const handleOpenModal = (fitnessClass = null) => {
     if (fitnessClass) {
+      console.log('Opening modal with class data:', fitnessClass);
       setEditingClass(fitnessClass);
+      const trainerIdValue = fitnessClass.trainer_id ? String(fitnessClass.trainer_id) : '';
+      console.log('Setting trainer_id to:', trainerIdValue, 'Type:', typeof trainerIdValue);
       setFormData({
         class_name: fitnessClass.class_name || '',
         description: fitnessClass.description || '',
-        trainer_id: fitnessClass.trainer_id || '',
-        max_participants: fitnessClass.max_participants || '',
+        trainer_id: trainerIdValue,
+        max_participants: fitnessClass.max_participants ? String(fitnessClass.max_participants) : '',
       });
     } else {
       setEditingClass(null);
@@ -93,21 +100,48 @@ const ClassesManagement = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    console.log('Form submitted. Current formData:', formData);
+    if (!validateForm()) {
+      console.log('Form validation failed. Errors:', errors);
+      return;
+    }
 
     try {
       setLoading(true);
+      const dataToSubmit = {
+        class_name: formData.class_name,
+        description: formData.description,
+        trainer_id: parseInt(formData.trainer_id, 10),
+        max_participants: parseInt(formData.max_participants, 10),
+      };
+      console.log('Submitting class data:', dataToSubmit);
+      console.log('Trainers available:', trainers);
+      console.log('Selected trainer_id:', dataToSubmit.trainer_id, 'Trainer exists?', trainers.some(t => t.id === dataToSubmit.trainer_id));
+      
       if (editingClass) {
-        await api.classesAPI.update(editingClass.id, formData);
+        console.log('Updating class ID:', editingClass.id);
+        console.log('Current form values before update:', formData);
+        const response = await api.classesAPI.update(editingClass.id, dataToSubmit);
+        console.log('Update response:', response);
         toast.success('Class updated successfully');
       } else {
-        await api.classesAPI.create(formData);
+        console.log('Creating new class');
+        const response = await api.classesAPI.create(dataToSubmit);
+        console.log('Create response:', response);
         toast.success('Class created successfully');
       }
       handleCloseModal();
-      fetchClasses();
+      await fetchClasses();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Operation failed');
+      console.error('Submit error:', err);
+      console.error('Error response data:', err.response?.data);
+      console.error('Error status:', err.response?.status);
+      if (err.response?.data?.errors) {
+        console.error('Validation errors:', err.response.data.errors);
+        setErrors(err.response.data.errors);
+      }
+      const errorMessage = err.response?.data?.message || err.message || 'Operation failed';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -121,13 +155,16 @@ const ClassesManagement = () => {
   const confirmDelete = async () => {
     try {
       setLoading(true);
+      console.log('Deleting class:', classToDelete.id);
       await api.classesAPI.delete(classToDelete.id);
       toast.success('Class deleted successfully');
       setIsConfirmOpen(false);
       setClassToDelete(null);
       fetchClasses();
     } catch (err) {
-      toast.error('Failed to delete class');
+      console.error('Delete error:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to delete class';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -151,15 +188,20 @@ const ClassesManagement = () => {
   }));
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Classes Management</h1>
-        <Button onClick={() => handleOpenModal()} className="flex items-center gap-2">
-          <Plus size={20} />
-          Add Class
-        </Button>
-      </div>
+    <div className="space-y-8">
+      {/* Header with Action Button */}
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-white">Classes Management</h1>
+          <Button onClick={() => handleOpenModal()} className="flex items-center gap-2">
+            <Plus size={20} />
+            Add Class
+          </Button>
+        </div>
+      </motion.div>
 
+      {/* Data Table */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
       <DataTable
         columns={columns}
         data={classes}
@@ -169,6 +211,7 @@ const ClassesManagement = () => {
         onEdit={handleOpenModal}
         onDelete={handleDelete}
       />
+      </motion.div>
 
       <FormModal
         isOpen={isModalOpen}
@@ -178,10 +221,19 @@ const ClassesManagement = () => {
         loading={loading}
         submitLabel={editingClass ? 'Update' : 'Create'}
       >
+        {editingClass && (
+          <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-4 text-sm">
+            <p className="text-blue-900">Editing ID: {editingClass.id}</p>
+            <p className="text-blue-700 text-xs mt-1">Debug - Current trainer_id: {formData.trainer_id}</p>
+          </div>
+        )}
         <FormInput
           label="Class Name"
           value={formData.class_name}
-          onChange={(e) => setFormData({ ...formData, class_name: e.target.value })}
+          onChange={(e) => {
+            console.log('Class name changed from:', formData.class_name, 'to:', e.target.value);
+            setFormData({ ...formData, class_name: e.target.value });
+          }}
           error={errors.class_name}
           placeholder="e.g., Yoga, HIIT, Pilates"
           required
@@ -190,7 +242,10 @@ const ClassesManagement = () => {
           label="Description"
           type="textarea"
           value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          onChange={(e) => {
+            console.log('Description changed from:', formData.description, 'to:', e.target.value);
+            setFormData({ ...formData, description: e.target.value });
+          }}
           error={errors.description}
           placeholder="Class description"
           required
@@ -199,7 +254,10 @@ const ClassesManagement = () => {
           label="Assign Trainer"
           type="select"
           value={formData.trainer_id}
-          onChange={(e) => setFormData({ ...formData, trainer_id: e.target.value })}
+          onChange={(e) => {
+            console.log('Trainer changed from:', formData.trainer_id, 'to:', e.target.value);
+            setFormData({ ...formData, trainer_id: e.target.value });
+          }}
           error={errors.trainer_id}
           options={trainerOptions}
           required
@@ -208,7 +266,10 @@ const ClassesManagement = () => {
           label="Max Participants"
           type="number"
           value={formData.max_participants}
-          onChange={(e) => setFormData({ ...formData, max_participants: e.target.value })}
+          onChange={(e) => {
+            console.log('Max participants changed from:', formData.max_participants, 'to:', e.target.value);
+            setFormData({ ...formData, max_participants: e.target.value });
+          }}
           error={errors.max_participants}
           placeholder="e.g., 20"
           required

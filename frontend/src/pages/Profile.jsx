@@ -43,7 +43,7 @@ export default function Profile() {
   const handleLogout = async () => {
     try {
       logout()
-      navigate('/login')
+      navigate('/')
     } catch (err) {
       console.error('Logout failed:', err)
     }

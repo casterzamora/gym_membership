@@ -14,8 +14,9 @@ class UpdateAttendanceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'check_in_time' => 'sometimes|date_format:H:i:s',
-            'check_out_time' => 'sometimes|date_format:H:i:s|after:check_in_time',
+            'attendance_status' => 'sometimes|string|in:Present,Absent,Late',
+            'attendance_notes' => 'nullable|string|max:500',
+            'recorded_at' => 'nullable|datetime',
         ];
     }
 }

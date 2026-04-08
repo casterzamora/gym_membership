@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Auth\AuthManager;
+use App\Auth\DualSanctumGuard;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,6 +21,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // TODO: Register custom Sanctum guard that supports both User and Member models
+        // Temporarily disabled to debug issues
+        // auth()->extend('sanctum', function ($app, $name, array $config) {
+        //     $guard = new DualSanctumGuard(
+        //         auth()->createUserProvider($config['provider'] ?? null),
+        //         $app['request']
+        //     );
+        //     return $guard;
+        // });
     }
 }

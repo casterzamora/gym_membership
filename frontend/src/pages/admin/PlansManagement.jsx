@@ -3,6 +3,7 @@ import { DataTable, FormModal, FormInput, ConfirmDialog, Button } from '@/compon
 import api from '@/services/api';
 import toast from 'react-hot-toast';
 import { Plus } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const PlansManagement = () => {
   const [plans, setPlans] = useState([]);
@@ -120,21 +121,26 @@ const PlansManagement = () => {
   const columns = [
     { key: 'id', label: 'ID' },
     { key: 'plan_name', label: 'Plan Name' },
-    { key: 'price', label: 'Price', render: (value) => `$${value}` },
+    { key: 'price', label: 'Price', render: (value) => `PHP ${value}` },
     { key: 'duration_months', label: 'Duration (Months)' },
     { key: 'description', label: 'Description' },
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Membership Plans</h1>
-        <Button onClick={() => handleOpenModal()} className="flex items-center gap-2">
-          <Plus size={20} />
-          Add Plan
-        </Button>
-      </div>
+    <div className="space-y-8">
+      {/* Header with Action Button */}
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-white">Membership Plans</h1>
+          <Button onClick={() => handleOpenModal()} className="flex items-center gap-2">
+            <Plus size={20} />
+            Add Plan
+          </Button>
+        </div>
+      </motion.div>
 
+      {/* Data Table */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
       <DataTable
         columns={columns}
         data={plans}
@@ -144,6 +150,7 @@ const PlansManagement = () => {
         onEdit={handleOpenModal}
         onDelete={handleDelete}
       />
+      </motion.div>
 
       <FormModal
         isOpen={isModalOpen}
@@ -162,7 +169,7 @@ const PlansManagement = () => {
           required
         />
         <FormInput
-          label="Price ($)"
+          label="Price (PHP)"
           type="number"
           value={formData.price}
           onChange={(e) => setFormData({ ...formData, price: e.target.value })}

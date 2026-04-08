@@ -8,8 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Payment extends Model
 {
     protected $fillable = [
-        'member_id', 'amount_paid', 'payment_date', 'payment_method',
-        'coverage_start', 'coverage_end', 'status'
+        'member_id', 'amount_paid', 'payment_date', 'payment_method_id',
+        'coverage_start', 'coverage_end'
     ];
 
     protected $casts = [
@@ -21,6 +21,11 @@ class Payment extends Model
 
     public function member(): BelongsTo
     {
-        return $this->belongsTo(Member::class);
+        return $this->belongsTo(Member::class, 'member_id');
+    }
+
+    public function paymentMethod(): BelongsTo
+    {
+        return $this->belongsTo(PaymentMethod::class, 'payment_method_id');
     }
 }

@@ -9,6 +9,7 @@ import TrainerLayout from '@/layouts/TrainerLayout'
 import Landing from '@/pages/Landing'
 import Login from '@/pages/Login'
 import Register from '@/pages/Register'
+import About from '@/pages/About'
 
 // Pages - Member
 import Dashboard from '@/pages/member/Dashboard'
@@ -56,7 +57,7 @@ function MemberRoute({ children }) {
     return <Navigate to="/trainer/dashboard" replace />
   }
 
-  console.log('MemberRoute: Member access granted for', user.name)
+  console.log('MemberRoute: Member access granted for', user.displayName || user.name)
   return <MemberLayout>{children}</MemberLayout>
 }
 
@@ -87,7 +88,7 @@ function AdminRoute({ children }) {
     return <Navigate to="/dashboard" replace />
   }
 
-  console.log('AdminRoute: Admin access granted for', user.name)
+  console.log('AdminRoute: Admin access granted for', user.displayName || user.name)
   return <AdminLayout>{children}</AdminLayout>
 }
 
@@ -109,7 +110,7 @@ function TrainerRoute({ children }) {
     return <Navigate to="/login" replace />
   }
 
-  console.log('TrainerRoute: Checking user - role =', user.role, 'name =', user.name)
+  console.log('TrainerRoute: Checking user - role =', user.role, 'name =', user.displayName || user.name)
   
   if (user.role !== 'trainer') {
     console.log('TrainerRoute: User role is', user.role, 'not trainer, should redirect to', user.role === 'admin' ? '/admin/dashboard' : '/dashboard')
@@ -120,7 +121,7 @@ function TrainerRoute({ children }) {
     return <Navigate to="/dashboard" replace />
   }
 
-  console.log('TrainerRoute: Trainer access granted for', user.name)
+  console.log('TrainerRoute: Trainer access granted for', user.displayName || user.name)
   return <TrainerLayout>{children}</TrainerLayout>
 }
 
@@ -141,6 +142,7 @@ export default function App() {
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Landing />} />
+        <Route path="/about" element={<About />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 

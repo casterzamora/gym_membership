@@ -3,7 +3,8 @@ import { AuthContext } from '@/context/AuthContext';
 import { DataTable, FormModal, FormInput, ConfirmDialog, Button } from '@/components';
 import api from '@/services/api';
 import toast from 'react-hot-toast';
-import { Plus } from 'lucide-react';
+
+import { motion } from 'framer-motion';
 
 const MembersManagement = () => {
   const { user } = useContext(AuthContext);
@@ -17,9 +18,15 @@ const MembersManagement = () => {
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
+    email: '',
     phone: '',
     date_of_birth: '',
     plan_id: '',
+    fitness_goal: '',
+    health_notes: '',
+    membership_status: '',
+    membership_start: '',
+    membership_end: '',
   });
   const [errors, setErrors] = useState({});
 
@@ -51,28 +58,25 @@ const MembersManagement = () => {
   };
 
   // Handle add/edit modal
-  const handleOpenModal = (member = null) => {
+  const handleOpenModal = (member) => {
     if (member) {
       setEditingMember(member);
       setFormData({
         first_name: member.first_name || '',
         last_name: member.last_name || '',
+        email: member.email || '',
         phone: member.phone || '',
         date_of_birth: member.date_of_birth || '',
         plan_id: member.plan_id || '',
+        fitness_goal: member.fitness_goal || '',
+        health_notes: member.health_notes || '',
+        membership_status: member.membership_status || 'active',
+        membership_start: member.membership_start || '',
+        membership_end: member.membership_end || '',
       });
-    } else {
-      setEditingMember(null);
-      setFormData({
-        first_name: '',
-        last_name: '',
-        phone: '',
-        date_of_birth: '',
-        plan_id: '',
-      });
+      setErrors({});
+      setIsModalOpen(true);
     }
-    setErrors({});
-    setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
@@ -81,9 +85,15 @@ const MembersManagement = () => {
     setFormData({
       first_name: '',
       last_name: '',
+      email: '',
       phone: '',
       date_of_birth: '',
       plan_id: '',
+      fitness_goal: '',
+      health_notes: '',
+      membership_status: '',
+      membership_start: '',
+      membership_end: '',
     });
     setErrors({});
   };
@@ -95,6 +105,7 @@ const MembersManagement = () => {
     if (!formData.phone.trim()) newErrors.phone = 'Phone is required';
     if (!formData.date_of_birth) newErrors.date_of_birth = 'Date of birth is required';
     if (!formData.plan_id) newErrors.plan_id = 'Membership plan is required';
+    if (!formData.membership_status) newErrors.membership_status = 'Membership status is required';
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -107,11 +118,20 @@ const MembersManagement = () => {
     try {
       setLoading(true);
       if (editingMember) {
-        await api.membersAPI.update(editingMember.id, formData);
+        const updateData = {
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          phone: formData.phone,
+          date_of_birth: formData.date_of_birth,
+          plan_id: formData.plan_id,
+          fitness_goal: formData.fitness_goal || null,
+          health_notes: formData.health_notes || null,
+          membership_status: formData.membership_status,
+          membership_start: formData.membership_start || null,
+          membership_end: formData.membership_end || null,
+        };
+        await api.membersAPI.update(editingMember.id, updateData);
         toast.success('Member updated successfully');
-      } else {
-        await api.membersAPI.create(formData);
-        toast.success('Member created successfully');
       }
       handleCloseModal();
       fetchMembers();
@@ -162,17 +182,14 @@ const MembersManagement = () => {
   const planOptions = plans.map(p => ({ value: p.id, label: p.plan_name }));
 
   return (
-    <div className="space-y-6">
-      {/* Header with Action Button */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Members Management</h1>
-        <Button onClick={() => handleOpenModal()} className="flex items-center gap-2">
-          <Plus size={20} />
-          Add Member
-        </Button>
-      </div>
+    <div className="space-y-8">
+      {/* Header */}
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+        <h1 className="text-3xl font-bold text-white">Members Management</h1>
+      </motion.div>
 
       {/* Data Table */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
       <DataTable
         columns={columns}
         data={members}
@@ -182,56 +199,97 @@ const MembersManagement = () => {
         onEdit={handleOpenModal}
         onDelete={handleDelete}
       />
+      </motion.div>
 
-      {/* Add/Edit Modal */}
-      <FormModal
-        isOpen={isModalOpen}
-        title={editingMember ? 'Edit Member' : 'Add New Member'}
-        onClose={handleCloseModal}
-        onSubmit={handleSubmit}
-        loading={loading}
-        submitLabel={editingMember ? 'Update' : 'Create'}
-      >
-        <FormInput
-          label="First Name"
-          value={formData.first_name}
-          onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-          error={errors.first_name}
-          required
-        />
-        <FormInput
-          label="Last Name"
-          value={formData.last_name}
-          onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-          error={errors.last_name}
-          required
-        />
-        <FormInput
-          label="Phone"
-          type="tel"
-          value={formData.phone}
-          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-          error={errors.phone}
-          required
-        />
-        <FormInput
-          label="Date of Birth"
-          type="date"
-          value={formData.date_of_birth}
-          onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
-          error={errors.date_of_birth}
-          required
-        />
-        <FormInput
-          label="Membership Plan"
-          type="select"
-          value={formData.plan_id}
-          onChange={(e) => setFormData({ ...formData, plan_id: e.target.value })}
-          error={errors.plan_id}
-          options={planOptions}
-          required
-        />
-      </FormModal>
+      {/* Edit Modal */}
+      {editingMember && (
+        <FormModal
+          isOpen={isModalOpen}
+          title="Edit Member"
+          onClose={handleCloseModal}
+          onSubmit={handleSubmit}
+          loading={loading}
+          submitLabel="Update"
+        >
+          <FormInput
+            label="First Name"
+            value={formData.first_name}
+            onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+            error={errors.first_name}
+            required
+          />
+          <FormInput
+            label="Last Name"
+            value={formData.last_name}
+            onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+            error={errors.last_name}
+            required
+          />
+          <FormInput
+            label="Phone"
+            type="tel"
+            value={formData.phone}
+            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            error={errors.phone}
+            required
+          />
+          <FormInput
+            label="Date of Birth"
+            type="date"
+            value={formData.date_of_birth}
+            onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+            error={errors.date_of_birth}
+            required
+          />
+          <FormInput
+            label="Membership Plan"
+            type="select"
+            value={formData.plan_id}
+            onChange={(e) => setFormData({ ...formData, plan_id: e.target.value })}
+            error={errors.plan_id}
+            options={planOptions}
+            required
+          />
+          <FormInput
+            label="Membership Status"
+            type="select"
+            value={formData.membership_status}
+            onChange={(e) => setFormData({ ...formData, membership_status: e.target.value })}
+            error={errors.membership_status}
+            options={[
+              { value: 'active', label: 'Active' },
+              { value: 'suspended', label: 'Suspended' },
+              { value: 'cancelled', label: 'Cancelled' },
+            ]}
+            required
+          />
+          <FormInput
+            label="Membership Start Date"
+            type="date"
+            value={formData.membership_start}
+            onChange={(e) => setFormData({ ...formData, membership_start: e.target.value })}
+          />
+          <FormInput
+            label="Membership End Date"
+            type="date"
+            value={formData.membership_end}
+            onChange={(e) => setFormData({ ...formData, membership_end: e.target.value })}
+          />
+          <FormInput
+            label="Fitness Goal"
+            value={formData.fitness_goal}
+            onChange={(e) => setFormData({ ...formData, fitness_goal: e.target.value })}
+            placeholder="e.g., Weight loss, Muscle gain"
+          />
+          <FormInput
+            label="Health Notes"
+            type="textarea"
+            value={formData.health_notes}
+            onChange={(e) => setFormData({ ...formData, health_notes: e.target.value })}
+            placeholder="Any health-related information or restrictions"
+          />
+        </FormModal>
+      )}
 
       {/* Delete Confirmation */}
       <ConfirmDialog

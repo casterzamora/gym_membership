@@ -3,6 +3,7 @@ import { DataTable, FormModal, FormInput, ConfirmDialog, Button } from '@/compon
 import api from '@/services/api';
 import toast from 'react-hot-toast';
 import { Plus } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const EquipmentManagement = () => {
   const [equipment, setEquipment] = useState([]);
@@ -126,15 +127,20 @@ const EquipmentManagement = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Equipment Management</h1>
-        <Button onClick={() => handleOpenModal()} className="flex items-center gap-2">
-          <Plus size={20} />
-          Add Equipment
-        </Button>
-      </div>
+    <div className="space-y-8">
+      {/* Header with Action Button */}
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-white">Equipment Management</h1>
+          <Button onClick={() => handleOpenModal()} className="flex items-center gap-2">
+            <Plus size={20} />
+            Add Equipment
+          </Button>
+        </div>
+      </motion.div>
 
+      {/* Data Table */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
       <DataTable
         columns={columns}
         data={equipment}
@@ -144,6 +150,7 @@ const EquipmentManagement = () => {
         onEdit={handleOpenModal}
         onDelete={handleDelete}
       />
+      </motion.div>
 
       <FormModal
         isOpen={isModalOpen}

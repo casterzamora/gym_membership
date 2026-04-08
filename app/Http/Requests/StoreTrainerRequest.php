@@ -19,7 +19,7 @@ class StoreTrainerRequest extends FormRequest
             'email' => 'required|email|unique:trainers',
             'phone' => 'required|string|max:20',
             'specialization' => 'required|string|max:255',
-            'hourly_rate' => 'required|numeric|min:0|max:999.99',
+            'hourly_rate' => 'required|numeric|min:0',
         ];
     }
 }

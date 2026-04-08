@@ -1,6 +1,7 @@
 import { useContext } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AuthContext } from '@/context/AuthContext'
+import { ElevateGymLogo } from '@/components'
 
 export default function Navbar() {
   const { user, logout } = useContext(AuthContext)
@@ -15,8 +16,8 @@ export default function Navbar() {
     <nav className="bg-gray-950 border-b border-gold-600 shadow-lg fixed w-full top-0 z-40">
       <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
         <Link to="/" className="flex items-center gap-2">
-          <div className="text-3xl font-bold text-gold-500">💪</div>
-          <span className="text-2xl font-bold text-gold-500">GymFlow</span>
+          <ElevateGymLogo size={40} />
+          <span className="text-2xl font-bold text-gold-500">Elevate Gym</span>
         </Link>
 
         <div className="flex items-center gap-6">
@@ -39,7 +40,7 @@ export default function Navbar() {
                   <Link to="/trainer/members" className="text-white hover:text-gold-400 transition">My Students</Link>
                 </>
               )}
-              <div className="text-sm text-gray-400">{user.name}</div>
+              <div className="text-sm text-gray-400">{user.displayName || user.name}</div>
               <button
                 onClick={handleLogout}
                 className="px-4 py-2 bg-gold-600 text-black font-bold rounded hover:bg-gold-500 transition"
@@ -49,7 +50,9 @@ export default function Navbar() {
             </>
           ) : (
             <>
-              <Link to="/login" className="text-white hover:text-gold-400 transition">Login</Link>
+              <Link to="/" className="text-white hover:text-gold-400 transition">Plans</Link>
+              <Link to="/about" className="text-white hover:text-gold-400 transition">About</Link>
+              <Link to="/login" className="text-white hover:text-gold-400 transition">Sign In</Link>
               <Link
                 to="/register"
                 className="px-4 py-2 bg-gold-600 text-black font-bold rounded hover:bg-gold-500 transition"

@@ -33,32 +33,57 @@ export const AuthProvider = ({ children }) => {
       })
       if (response.ok) {
         const data = await response.json()
-        console.log('AuthContext: Token valid, setting user:', data.data.name)
-        setUser(data.data)
-      } else {
-        console.log('AuthContext: Token invalid, logging out')
+        const userData = data.data
+        const displayName = userData.first_name ? `${userData.first_name} ${userData.last_name}` : userData.name
+        console.log('AuthContext: Token valid, setting user:', displayName)
+        setUser({
+          ...userData,
+          displayName,
+          role: userData.role || 'member'
+        })
+      } else if (response.status === 401) {
+        console.log('AuthContext: Token invalid (401), logging out')
         logout()
+      } else {
+        // For 500 or other errors, log but don't logout - token might still be valid
+        console.warn('AuthContext: Token validation returned', response.status, '- keeping user logged in')
       }
     } catch (error) {
       console.error('AuthContext: Token validation failed:', error)
-      logout()
+      // Don't logout on network errors - keep the user logged in
     } finally {
       setLoading(false)
     }
   }
 
   const login = (userData, newToken) => {
-    // Set flag FIRST to ensure it's set before token update triggers effect
-    console.log('AuthContext.login: Starting login for', userData.name)
+    console.log('AuthContext.login: Starting login for:', userData.email)
+    // Set flag to skip validation
     skipValidationRef.current = true
     
-    // Update all state at once
-    setUser(userData)
+    // Set the token first
     localStorage.setItem('token', newToken)
     setToken(newToken)
+    
+    // Handle both member and user formats
+    const displayName = userData.first_name 
+      ? `${userData.first_name} ${userData.last_name}` 
+      : userData.name
+    
+    const userRole = userData.role || 'member'
+    
+    const userData_normalized = {
+      ...userData,
+      displayName,
+      role: userRole,
+      // Normalize email field for both user and member
+      email: userData.email,
+    }
+    
+    setUser(userData_normalized)
     setLoading(false)
     
-    console.log('AuthContext.login: Complete. User role:', userData.role)
+    console.log('AuthContext.login: Complete. User:', displayName, 'Role:', userRole)
   }
 
   const logout = () => {

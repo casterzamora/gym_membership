@@ -20,7 +20,7 @@ class Certification extends Model
     public function trainers(): BelongsToMany
     {
         return $this->belongsToMany(Trainer::class, 'trainer_certifications')
-            ->withPivot('date_obtained', 'expires_at')
+            ->withPivot('date_obtained')
             ->withTimestamps();
     }
 }

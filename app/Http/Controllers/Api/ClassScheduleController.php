@@ -17,7 +17,7 @@ class ClassScheduleController extends Controller
      */
     public function index()
     {
-        $schedules = ClassSchedule::with('fitnessClass.trainer.user', 'attendances')->paginate(15);
+        $schedules = ClassSchedule::with('fitnessClass.trainer', 'attendances')->paginate(15);
         return $this->paginated($schedules, 'Class schedules retrieved successfully');
     }
 
@@ -39,7 +39,7 @@ class ClassScheduleController extends Controller
      */
     public function show(ClassSchedule $class_schedule)
     {
-        return $this->success($class_schedule->load('fitnessClass.trainer.user', 'attendances'), 'Class schedule retrieved successfully');
+        return $this->success($class_schedule->load('fitnessClass.trainer', 'attendances'), 'Class schedule retrieved successfully');
     }
 
     /**
@@ -49,7 +49,7 @@ class ClassScheduleController extends Controller
     {
         try {
             $class_schedule->update($request->validated());
-            return $this->success($class_schedule->load('fitnessClass.trainer.user', 'attendances'), 'Class schedule updated successfully');
+            return $this->success($class_schedule->load('fitnessClass.trainer', 'attendances'), 'Class schedule updated successfully');
         } catch (\Exception $e) {
             return $this->error('Failed to update class schedule: ' . $e->getMessage(), null, 500);
         }

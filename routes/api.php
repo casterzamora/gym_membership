@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\FitnessClassController;
 use App\Http\Controllers\Api\ClassScheduleController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\EquipmentController;
 use App\Http\Controllers\Api\MembershipPlanController;
 use App\Http\Controllers\Api\HealthCheckController;
@@ -23,12 +24,13 @@ Route::post('login', [AuthController::class, 'login']);
 Route::get('v1/plans', [MembershipPlanController::class, 'index']);
 Route::get('v1/classes', [FitnessClassController::class, 'index']);
 Route::get('v1/schedules', [ClassScheduleController::class, 'index']);
+Route::get('v1/payment-methods', [PaymentMethodController::class, 'index']);
 
 // API v1 Routes
 Route::prefix('v1')->group(function () {
 
     // Protected Auth Routes
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware('App\Http\Middleware\DualSanctumAuth')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
         Route::get('me', [AuthController::class, 'me']);
 
@@ -45,9 +47,11 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('trainers', TrainerController::class);
 
         // Fitness Classes (protected write operations)
+        Route::get('classes', [FitnessClassController::class, 'index']);
         Route::post('classes', [FitnessClassController::class, 'store']);
         Route::get('classes/{fitnessClass}', [FitnessClassController::class, 'show']);
         Route::put('classes/{fitnessClass}', [FitnessClassController::class, 'update']);
+        Route::patch('classes/{fitnessClass}', [FitnessClassController::class, 'update']);
         Route::delete('classes/{fitnessClass}', [FitnessClassController::class, 'destroy']);
 
         // Class Schedules (protected write operations)
@@ -63,6 +67,10 @@ Route::prefix('v1')->group(function () {
 
         // Payments
         Route::apiResource('payments', PaymentController::class);
+
+        // Payment Methods
+        Route::get('payment-methods', [PaymentMethodController::class, 'index']);
+        Route::get('payment-methods/{paymentMethod}', [PaymentMethodController::class, 'show']);
 
         // Equipment
         Route::apiResource('equipment', EquipmentController::class);

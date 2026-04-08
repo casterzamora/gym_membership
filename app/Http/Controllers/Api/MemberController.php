@@ -17,7 +17,7 @@ class MemberController extends Controller
      */
     public function index()
     {
-        $members = Member::with('user', 'plan', 'attendances')->paginate(15);
+        $members = Member::with('plan', 'attendances', 'payments')->latest('created_at')->paginate(15);
         return $this->paginated($members, 'Members retrieved successfully');
     }
 
@@ -27,8 +27,13 @@ class MemberController extends Controller
     public function store(StoreMemberRequest $request)
     {
         try {
-            $member = Member::create($request->validated());
-            return $this->success($member->load('user', 'plan'), 'Member created successfully', 201);
+            $data = $request->validated();
+            // Hash the password if provided
+            if (isset($data['password_hash'])) {
+                $data['password_hash'] = \Illuminate\Support\Facades\Hash::make($data['password_hash']);
+            }
+            $member = Member::create($data);
+            return $this->success($member->load('plan'), 'Member created successfully', 201);
         } catch (\Exception $e) {
             return $this->error('Failed to create member: ' . $e->getMessage(), null, 500);
         }
@@ -37,21 +42,15 @@ class MemberController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show($idOrUserId)
+    public function show($id)
     {
-        // Try to find by member ID first
-        $member = Member::find($idOrUserId);
-        
-        // If not found, try to find by user_id
-        if (!$member) {
-            $member = Member::where('user_id', $idOrUserId)->first();
-        }
+        $member = Member::with('plan', 'attendances', 'payments')->find($id);
 
         if (!$member) {
             return $this->notFound('Member not found');
         }
 
-        return $this->success($member->load('user', 'plan', 'attendances'), 'Member retrieved successfully');
+        return $this->success($member, 'Member retrieved successfully');
     }
 
     /**
@@ -60,8 +59,13 @@ class MemberController extends Controller
     public function update(UpdateMemberRequest $request, Member $member)
     {
         try {
-            $member->update($request->validated());
-            return $this->success($member->load('user', 'plan'), 'Member updated successfully');
+            $data = $request->validated();
+            // Hash password if being updated
+            if (isset($data['password_hash'])) {
+                $data['password_hash'] = \Illuminate\Support\Facades\Hash::make($data['password_hash']);
+            }
+            $member->update($data);
+            return $this->success($member->load('plan'), 'Member updated successfully');
         } catch (\Exception $e) {
             return $this->error('Failed to update member: ' . $e->getMessage(), null, 500);
         }

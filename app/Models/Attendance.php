@@ -12,7 +12,7 @@ class Attendance extends Model
     public $timestamps = true;
     protected $primaryKey = ['member_id', 'schedule_id'];
 
-    protected $fillable = ['member_id', 'schedule_id', 'attendance_status', 'recorded_at'];
+    protected $fillable = ['member_id', 'schedule_id', 'attendance_status', 'attendance_notes', 'recorded_at'];
 
     protected $casts = [
         'recorded_at' => 'datetime',

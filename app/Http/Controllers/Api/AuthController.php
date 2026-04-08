@@ -3,74 +3,71 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Models\Member;
+use App\Models\User;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
     use ApiResponse;
 
     /**
-     * Register a new user
+     * Register a new member
      */
     public function register(Request $request)
     {
         try {
             $validated = $request->validate([
-                'name' => 'required|string|max:255',
-                'email' => 'required|email|unique:users',
+                'first_name' => 'required|string|max:255',
+                'last_name' => 'required|string|max:255',
+                'email' => 'required|email|unique:members',
+                'username' => 'required|string|max:255|unique:members',
                 'password' => 'required|string|min:8|confirmed',
-                'plan_id' => 'nullable|integer|exists:membership_plans,id',
+                'phone' => 'nullable|string|max:20',
+                'date_of_birth' => 'nullable|date',
+                'plan_id' => 'required|integer|exists:membership_plans,id',
+                'fitness_goal' => 'nullable|string|max:255',
+                'health_notes' => 'nullable|string',
+                'registration_type' => 'nullable|string|default:standard',
             ]);
 
-            // Create user
-            $user = User::create([
-                'name' => $validated['name'],
+            // Create member
+            $member = Member::create([
+                'first_name' => $validated['first_name'],
+                'last_name' => $validated['last_name'],
                 'email' => $validated['email'],
-                'password' => Hash::make($validated['password']),
-                'role' => 'member',
+                'username' => $validated['username'],
+                'password_hash' => Hash::make($validated['password']),
+                'phone' => $validated['phone'] ?? '',
+                'date_of_birth' => $validated['date_of_birth'] ?? null,
+                'plan_id' => $validated['plan_id'],
+                'fitness_goal' => $validated['fitness_goal'] ?? null,
+                'health_notes' => $validated['health_notes'] ?? null,
+                'registration_type' => $validated['registration_type'] ?? 'standard',
+                'membership_start' => now()->toDateString(),
+                'membership_end' => now()->addMonths(3)->toDateString(), // Default to 3 month plan
+                'membership_status' => 'active',
             ]);
 
-            // Parse name into first and last
-            $nameParts = explode(' ', $validated['name']);
-            $firstName = $nameParts[0];
-            $lastName = isset($nameParts[1]) ? implode(' ', array_slice($nameParts, 1)) : 'Member';
-
-            // Create associated member profile with selected or default plan
-            try {
-                Member::create([
-                    'user_id' => $user->id,
-                    'first_name' => $firstName,
-                    'last_name' => $lastName,
-                    'phone' => '',
-                    'date_of_birth' => now()->subYears(30)->format('Y-m-d'),
-                    'plan_id' => $validated['plan_id'] ?? 1, // Use provided plan or default
-                ]);
-            } catch (\Exception $memberError) {
-                // If member creation fails, delete the user to maintain consistency
-                $user->delete();
-                throw new \Exception('Failed to create member profile: ' . $memberError->getMessage());
-            }
-
-            $token = $user->createToken('api-token')->plainTextToken;
+            $token = Member::find($member->id)->createToken('api-token')->plainTextToken;
 
             return $this->success([
-                'user' => $user,
+                'member' => $member,
                 'token' => $token,
-            ], 'User registered successfully', 201);
+            ], 'Member registered successfully', 201);
         } catch (ValidationException $e) {
             return $this->validationError($e->errors(), 'Validation failed');
         } catch (\Exception $e) {
-            return $this->error('Failed to register user: ' . $e->getMessage(), null, 500);
+            return $this->error('Failed to register member: ' . $e->getMessage(), null, 500);
         }
     }
 
     /**
-     * Login user
+     * Login member or user (admin/trainer)
      */
     public function login(Request $request)
     {
@@ -80,18 +77,31 @@ class AuthController extends Controller
                 'password' => 'required|string',
             ]);
 
-            $user = User::where('email', $validated['email'])->first();
-
-            if (!$user || !Hash::check($validated['password'], $user->password)) {
-                return $this->error('Invalid credentials', null, 401);
+            // Try to authenticate as a Member first
+            $member = Member::where('email', $validated['email'])->first();
+            if ($member && Hash::check($validated['password'], $member->password_hash)) {
+                if ($member->membership_status !== 'active') {
+                    return $this->error('Membership is not active', null, 403);
+                }
+                $token = $member->createToken('api-token')->plainTextToken;
+                return $this->success([
+                    'member' => $member,
+                    'token' => $token,
+                ], 'Login successful');
             }
 
-            $token = $user->createToken('api-token')->plainTextToken;
+            // Try to authenticate as a User (admin/trainer)
+            $user = User::where('email', $validated['email'])->first();
+            if ($user && Hash::check($validated['password'], $user->password)) {
+                $token = $user->createToken('api-token')->plainTextToken;
+                return $this->success([
+                    'user' => $user,
+                    'token' => $token,
+                ], 'Login successful');
+            }
 
-            return $this->success([
-                'user' => $user,
-                'token' => $token,
-            ], 'Login successful');
+            // If neither worked, return invalid credentials
+            return $this->error('Invalid credentials', null, 401);
         } catch (ValidationException $e) {
             return $this->validationError($e->errors(), 'Validation failed');
         } catch (\Exception $e) {
@@ -113,10 +123,35 @@ class AuthController extends Controller
     }
 
     /**
-     * Get current user
+     * Get current user (Member or User/Admin)
      */
     public function me(Request $request)
     {
-        return $this->success($request->user(), 'Current user retrieved successfully');
+        try {
+            $token = $request->bearerToken();
+            
+            if (!$token) {
+                return $this->error('No authorization token', null, 401);
+            }
+            
+            // Use Sanctum to find the token
+            $patToken = PersonalAccessToken::findToken($token);
+            
+            if (!$patToken) {
+                return $this->error('Invalid or expired token', null, 401);
+            }
+            
+            // Get the user based on tokenable_type
+            $model = $patToken->tokenable_type;
+            $user = $model::find($patToken->tokenable_id);
+            
+            if (!$user) {
+                return $this->error('User not found', null, 404);
+            }
+            
+            return $this->success($user, 'Current user retrieved successfully');
+        } catch (\Exception $e) {
+            return $this->error('Error: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine(), null, 500);
+        }
     }
 }

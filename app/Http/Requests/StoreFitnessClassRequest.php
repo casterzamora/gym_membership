@@ -16,8 +16,9 @@ class StoreFitnessClassRequest extends FormRequest
         return [
             'class_name' => 'required|string|max:255|unique:fitness_classes',
             'description' => 'nullable|string|max:1000',
-            'capacity' => 'required|integer|min:1|max:100',
+            'max_participants' => 'required|integer|min:1|max:100',
             'trainer_id' => 'required|exists:trainers,id',
+            'difficulty_level' => 'nullable|string|max:50',
         ];
     }
 }

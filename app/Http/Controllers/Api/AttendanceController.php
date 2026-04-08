@@ -19,7 +19,7 @@ class AttendanceController extends Controller
      */
     public function index()
     {
-        $attendance = Attendance::with('member.user', 'schedule')->paginate(15);
+        $attendance = Attendance::with('member', 'schedule')->paginate(15);
         return $this->paginated($attendance, 'Attendance records retrieved successfully');
     }
 
@@ -30,7 +30,7 @@ class AttendanceController extends Controller
     {
         try {
             $attendance = Attendance::create($request->validated());
-            return $this->success($attendance->load('member.user', 'schedule'), 'Attendance recorded successfully', 201);
+            return $this->success($attendance->load('member', 'schedule'), 'Attendance recorded successfully', 201);
         } catch (\Exception $e) {
             return $this->error('Failed to record attendance: ' . $e->getMessage(), null, 500);
         }
@@ -67,7 +67,7 @@ class AttendanceController extends Controller
             }
 
             $attendance->update($request->validated());
-            return $this->success($attendance->load('member.user', 'schedule'), 'Attendance updated successfully');
+            return $this->success($attendance->load('member', 'schedule'), 'Attendance updated successfully');
         } catch (\Exception $e) {
             return $this->error('Failed to update attendance: ' . $e->getMessage(), null, 500);
         }

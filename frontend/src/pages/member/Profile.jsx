@@ -23,15 +23,10 @@ export default function Profile() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate('/login')
-      return
-    }
-    
     if (user) {
       fetchProfileData()
     }
-  }, [user, authLoading])
+  }, [user])
 
   const fetchProfileData = async () => {
     try {
@@ -114,7 +109,7 @@ export default function Profile() {
   const handleLogout = async () => {
     try {
       logout()
-      navigate('/login')
+      navigate('/')
     } catch (err) {
       console.error('Logout failed:', err)
     }
@@ -172,7 +167,7 @@ export default function Profile() {
               </div>
               <div>
                 <div className="text-gold-bright text-sm font-bold mb-1">PRICE</div>
-                <div className="text-gold-bright font-bold">${currentPlan?.price || '0'}/{currentPlan?.duration || 'month'}</div>
+                <div className="text-gold-bright font-bold">PHP {currentPlan?.price || '0'}/{currentPlan?.duration || 'month'}</div>
               </div>
             </div>
           </div>
@@ -323,7 +318,7 @@ export default function Profile() {
               <div className="grid md:grid-cols-3 gap-6 py-6 border-y border-gold-500/20">
                 <div>
                   <p className="text-gold-500 text-sm font-bold mb-1">PRICE</p>
-                  <p className="text-2xl font-bold text-white">${currentPlan.price}</p>
+                  <p className="text-2xl font-bold text-white">PHP {currentPlan.price}</p>
                   <p className="text-xs text-gray-400">per {currentPlan.duration}</p>
                 </div>
                 <div>
@@ -348,7 +343,7 @@ export default function Profile() {
                     <h4 className="text-lg font-bold text-gold-bright mb-2">{plan.plan_name}</h4>
                     <p className="text-gray-400 text-sm mb-4">{plan.description}</p>
                     <div className="py-4 border-y border-gray-700 mb-4">
-                      <p className="text-2xl font-bold text-white">${plan.price}</p>
+                      <p className="text-2xl font-bold text-white">PHP {plan.price}</p>
                       <p className="text-xs text-gray-400">per {plan.duration}</p>
                     </div>
                     <button className="w-full px-4 py-2 bg-gold-600 text-black font-bold rounded hover:bg-gold-500 transition">

@@ -15,10 +15,11 @@ class UpdateClassScheduleRequest extends FormRequest
     {
         return [
             'class_id' => 'sometimes|exists:fitness_classes,id',
-            'scheduled_date' => 'sometimes|date|after_or_equal:today',
+            'class_date' => 'sometimes|date|after_or_equal:today',
             'start_time' => 'sometimes|date_format:H:i',
             'end_time' => 'sometimes|date_format:H:i|after:start_time',
-            'location' => 'sometimes|string|max:255',
+            'recurrence_type' => 'nullable|string|max:50',
+            'recurrence_end_date' => 'nullable|date|after:class_date',
         ];
     }
 }

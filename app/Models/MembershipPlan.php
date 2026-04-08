@@ -10,7 +10,7 @@ class MembershipPlan extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['plan_name', 'price', 'duration_months', 'description'];
+    protected $fillable = ['plan_name', 'price', 'duration_months', 'description', 'max_classes_per_week'];
 
     protected $casts = [
         'price' => 'decimal:2',

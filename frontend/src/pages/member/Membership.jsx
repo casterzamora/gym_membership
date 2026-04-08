@@ -125,7 +125,7 @@ export default function Membership() {
               <div className="grid md:grid-cols-3 gap-6 py-6 border-y border-gold-500/20">
                 <div>
                   <p className="text-gold-500 text-sm font-bold mb-1">PRICE</p>
-                  <p className="text-2xl font-bold text-white">${currentPlan.price}</p>
+                  <p className="text-2xl font-bold text-white">PHP {currentPlan.price}</p>
                   <p className="text-xs text-gray-400">per {currentPlan.duration}</p>
                 </div>
                 <div>
@@ -166,7 +166,7 @@ export default function Membership() {
                 <p className="text-gray-400 text-sm mb-4">{plan.description}</p>
                 
                 <div className="my-6 py-6 border-y border-gray-700">
-                  <p className="text-3xl font-bold text-white">${plan.price}</p>
+                  <p className="text-3xl font-bold text-white">PHP {plan.price}</p>
                   <p className="text-xs text-gray-400">per {plan.duration}</p>
                 </div>
 

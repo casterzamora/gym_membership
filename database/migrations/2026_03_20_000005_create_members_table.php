@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('last_name');
             $table->string('phone');
             $table->date('date_of_birth');
-            $table->foreignId('plan_id')->constrained('membership_plans');
+            $table->foreignId('plan_id')->nullable()->constrained('membership_plans');
             $table->timestamps();
         });
     }
