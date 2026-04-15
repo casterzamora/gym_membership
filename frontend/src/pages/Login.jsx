@@ -46,15 +46,20 @@ export default function Login() {
         const member = response.data.data.member || response.data.data.user
         const token = response.data.data.token
         const memberName = member.first_name ? `${member.first_name} ${member.last_name}` : member.name
-        console.log(`Login succeeded for ${member.email} (${memberName}), role should be: member`)
+        const role = member.role || 'member'
+        console.log(`Login succeeded for ${member.email} (${memberName}), role: ${role}`)
         
         // Call login to update AuthContext synchronously
         console.log('Calling AuthContext.login...')
         login(member, token)
         console.log('AuthContext.login completed, checking context state...')
         
-        // All members go to dashboard - give React time to batch state updates
-        const redirectPath = '/dashboard'
+        // Route by role so admin/trainer don't briefly hit member pages.
+        const redirectPath = role === 'admin'
+          ? '/admin/dashboard'
+          : role === 'trainer'
+            ? '/trainer/dashboard'
+            : '/dashboard'
         console.log(`Will navigate to ${redirectPath}`)
         
         // Small delay to ensure React has batched state updates

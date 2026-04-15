@@ -16,6 +16,31 @@ class AuthController extends Controller
     use ApiResponse;
 
     /**
+     * Normalize Member/User into a consistent auth payload for frontend consumers.
+     */
+    private function buildAuthUserPayload($user): array
+    {
+        if ($user instanceof Member) {
+            return [
+                'id' => $user->id,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'email' => $user->email,
+                'role' => 'member',
+                'type' => 'member',
+            ];
+        }
+
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $user->role ?? 'member',
+            'type' => 'user',
+        ];
+    }
+
+    /**
      * Register a new member
      */
     public function register(Request $request)
@@ -55,8 +80,11 @@ class AuthController extends Controller
 
             $token = Member::find($member->id)->createToken('api-token')->plainTextToken;
 
+            $normalizedUser = $this->buildAuthUserPayload($member);
+
             return $this->success([
                 'member' => $member,
+                'user' => $normalizedUser,
                 'token' => $token,
             ], 'Member registered successfully', 201);
         } catch (ValidationException $e) {
@@ -84,8 +112,12 @@ class AuthController extends Controller
                     return $this->error('Membership is not active', null, 403);
                 }
                 $token = $member->createToken('api-token')->plainTextToken;
+
+                $normalizedUser = $this->buildAuthUserPayload($member);
+
                 return $this->success([
                     'member' => $member,
+                    'user' => $normalizedUser,
                     'token' => $token,
                 ], 'Login successful');
             }
@@ -94,8 +126,13 @@ class AuthController extends Controller
             $user = User::where('email', $validated['email'])->first();
             if ($user && Hash::check($validated['password'], $user->password)) {
                 $token = $user->createToken('api-token')->plainTextToken;
+
+                $normalizedUser = $this->buildAuthUserPayload($user);
+
                 return $this->success([
+                    'member' => null,
                     'user' => $user,
+                    'auth_user' => $normalizedUser,
                     'token' => $token,
                 ], 'Login successful');
             }
@@ -115,7 +152,19 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         try {
-            $request->user()->currentAccessToken()->delete();
+            $token = $request->bearerToken();
+
+            if (!$token) {
+                return $this->error('No authorization token', null, 401);
+            }
+
+            $patToken = PersonalAccessToken::findToken($token);
+
+            if (!$patToken) {
+                return $this->error('Invalid or expired token', null, 401);
+            }
+
+            $patToken->delete();
             return $this->success(null, 'Logout successful');
         } catch (\Exception $e) {
             return $this->error('Failed to logout: ' . $e->getMessage(), null, 500);
@@ -148,10 +197,12 @@ class AuthController extends Controller
             if (!$user) {
                 return $this->error('User not found', null, 404);
             }
+
+            $normalizedUser = $this->buildAuthUserPayload($user);
             
-            return $this->success($user, 'Current user retrieved successfully');
+            return $this->success($normalizedUser, 'Current user retrieved successfully');
         } catch (\Exception $e) {
-            return $this->error('Error: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine(), null, 500);
+            return $this->error('Failed to retrieve current user: ' . $e->getMessage(), null, 500);
         }
     }
 }

@@ -1,9 +1,16 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { AuthContext } from '@/context/AuthContext';
 import { FormModal, FormInput, ConfirmDialog, LoadingSpinner, Button, Card } from '@/components';
 import api from '@/services/api';
 import { Trash2, Edit2, Plus, BookOpen } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+const initialForm = {
+  class_name: '',
+  description: '',
+  max_participants: '',
+  difficulty_level: '',
+};
 
 const TrainerClasses = () => {
   const { user } = useContext(AuthContext);
@@ -13,91 +20,131 @@ const TrainerClasses = () => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [editingClass, setEditingClass] = useState(null);
   const [classToDelete, setClassToDelete] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    category: '',
-    capacity: '',
-    description: '',
-  });
+  const [formData, setFormData] = useState(initialForm);
   const [errors, setErrors] = useState({});
+  const [currentTrainerId, setCurrentTrainerId] = useState(null);
 
   useEffect(() => {
-    if (user?.id) {
+    if (user?.email) {
       fetchClasses();
     }
-  }, [user?.id]);
+  }, [user?.email]);
+
+  const resolveTrainerId = async () => {
+    const trainersRes = await api.trainersAPI.list();
+    const all = trainersRes?.data?.data || [];
+    const trainer = all.find((t) => t.email?.toLowerCase() === user?.email?.toLowerCase());
+    return trainer?.id || null;
+  };
 
   const fetchClasses = async () => {
     try {
       setLoading(true);
+      const trainerId = await resolveTrainerId();
+      setCurrentTrainerId(trainerId);
+
+      if (!trainerId) {
+        setClasses([]);
+        return;
+      }
+
       const res = await api.classesAPI.list();
-      const allClasses = res.data.data || [];
-      const myClasses = allClasses.filter(c => c.trainer_id === user?.id);
-      setClasses(myClasses);
+      const allClasses = res?.data?.data || [];
+      setClasses(allClasses.filter((c) => Number(c.trainer_id) === Number(trainerId)));
     } catch (err) {
       toast.error('Failed to load classes');
+      setClasses([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEdit = (classItem) => {
+  const difficultyOptions = useMemo(
+    () => [
+      { label: 'Beginner', value: 'Beginner' },
+      { label: 'Intermediate', value: 'Intermediate' },
+      { label: 'Advanced', value: 'Advanced' },
+    ],
+    []
+  );
+
+  const openCreateModal = () => {
+    setEditingClass(null);
+    setFormData(initialForm);
+    setErrors({});
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (classItem) => {
     setEditingClass(classItem);
     setFormData({
-      name: classItem.name,
-      category: classItem.category,
-      capacity: classItem.capacity,
-      description: classItem.description,
+      class_name: classItem.class_name || '',
+      description: classItem.description || '',
+      max_participants: classItem.max_participants || '',
+      difficulty_level: classItem.difficulty_level || '',
     });
     setErrors({});
     setIsModalOpen(true);
   };
 
-  const handleDelete = (classItem) => {
-    setClassToDelete(classItem);
-    setIsConfirmOpen(true);
+  const validate = () => {
+    const next = {};
+    if (!formData.class_name.trim()) next.class_name = 'Class name is required';
+    if (!formData.max_participants || Number(formData.max_participants) <= 0) next.max_participants = 'Capacity must be greater than 0';
+    if (!formData.difficulty_level) next.difficulty_level = 'Difficulty level is required';
+    setErrors(next);
+    return Object.keys(next).length === 0;
   };
 
   const handleSave = async () => {
-    if (!formData.name || !formData.category || !formData.capacity) {
-      setErrors({ general: 'Please fill in all required fields' });
+    if (!validate()) return;
+    if (!currentTrainerId) {
+      toast.error('Trainer profile not found for this account');
       return;
     }
 
+    const payload = {
+      class_name: formData.class_name,
+      description: formData.description || null,
+      max_participants: Number(formData.max_participants),
+      difficulty_level: formData.difficulty_level,
+      trainer_id: Number(currentTrainerId),
+    };
+
     try {
+      setLoading(true);
       if (editingClass) {
-        await api.classesAPI.update(editingClass.id, {
-          ...formData,
-          trainer_id: user?.id,
-        });
+        await api.classesAPI.update(editingClass.id, payload);
         toast.success('Class updated successfully');
-        setClasses(classes.map(c => c.id === editingClass.id ? { ...c, ...formData } : c));
       } else {
-        const res = await api.classesAPI.create({
-          ...formData,
-          trainer_id: user?.id,
-        });
+        await api.classesAPI.create(payload);
         toast.success('Class created successfully');
-        setClasses([...classes, res.data.data]);
       }
       setIsModalOpen(false);
       setEditingClass(null);
-      setFormData({ name: '', category: '', capacity: '', description: '' });
+      setFormData(initialForm);
+      await fetchClasses();
     } catch (err) {
-      setErrors({ general: err.response?.data?.message || 'Failed to save class' });
-      toast.error('Failed to save class');
+      toast.error(err.response?.data?.message || 'Failed to save class');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleConfirmDelete = async () => {
+    if (!classToDelete) return;
+
     try {
+      setLoading(true);
       await api.classesAPI.delete(classToDelete.id);
       toast.success('Class deleted successfully');
-      setClasses(classes.filter(c => c.id !== classToDelete.id));
       setIsConfirmOpen(false);
       setClassToDelete(null);
+      await fetchClasses();
     } catch (err) {
-      toast.error('Failed to delete class');
+      toast.error(err.response?.data?.message || 'Failed to delete class');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -112,35 +159,25 @@ const TrainerClasses = () => {
   return (
     <div className="pt-20 min-h-screen bg-dark-bg pb-12">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <BookOpen size={32} className="text-gold-bright" />
+              <BookOpen size={32} className="text-gold-400" />
               <h1 className="text-4xl font-bold text-white">My Classes</h1>
             </div>
-            <p className="text-gray-400">Manage and organize your training programs</p>
+            <p className="text-gray-400">Manage your assigned class catalog</p>
           </div>
-          <Button 
-            onClick={() => {
-              setEditingClass(null);
-              setFormData({ name: '', category: '', capacity: '', description: '' });
-              setErrors({});
-              setIsModalOpen(true);
-            }}
-            className="flex items-center gap-2"
-          >
+          <Button onClick={openCreateModal} className="flex items-center gap-2">
             <Plus size={18} />
             New Class
           </Button>
         </div>
 
-        {/* Classes Table */}
         {classes.length === 0 ? (
           <Card>
             <div className="p-12 text-center">
               <BookOpen size={48} className="text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400">No classes created yet. Create your first class!</p>
+              <p className="text-gray-400">No classes created yet. Create your first class.</p>
             </div>
           </Card>
         ) : (
@@ -148,41 +185,36 @@ const TrainerClasses = () => {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gold-bright/20 bg-dark-secondary">
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gold-bright">Class Name</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gold-bright">Category</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gold-bright">Capacity</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gold-bright">Description</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gold-bright">Actions</th>
+                  <tr className="border-b border-gold-600/20 bg-dark-secondary">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gold-300">Class Name</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gold-300">Difficulty</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gold-300">Capacity</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gold-300">Description</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gold-300">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {classes.map((classItem) => (
                     <tr key={classItem.id} className="border-b border-gray-700 hover:bg-dark-secondary transition">
-                      <td className="px-6 py-4 text-white font-medium">{classItem.name}</td>
-                      <td className="px-6 py-4">
-                        <span className="capitalize text-gray-300 text-sm">{classItem.category}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-white font-medium">{classItem.capacity}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-gray-400 text-sm truncate max-w-xs inline-block">
-                          {classItem.description || '-'}
-                        </span>
-                      </td>
+                      <td className="px-6 py-4 text-white font-medium">{classItem.class_name}</td>
+                      <td className="px-6 py-4 text-gray-300">{classItem.difficulty_level || '-'}</td>
+                      <td className="px-6 py-4 text-white">{classItem.max_participants}</td>
+                      <td className="px-6 py-4 text-gray-400 text-sm max-w-xs truncate">{classItem.description || '-'}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handleEdit(classItem)}
-                            className="p-2 text-blue-400 hover:bg-blue-500/20 rounded transition"
+                            onClick={() => openEditModal(classItem)}
+                            className="p-2 text-blue-300 hover:bg-blue-500/20 rounded transition"
                             title="Edit"
                           >
                             <Edit2 size={16} />
                           </button>
                           <button
-                            onClick={() => handleDelete(classItem)}
-                            className="p-2 text-red-400 hover:bg-red-500/20 rounded transition"
+                            onClick={() => {
+                              setClassToDelete(classItem);
+                              setIsConfirmOpen(true);
+                            }}
+                            className="p-2 text-red-300 hover:bg-red-500/20 rounded transition"
                             title="Delete"
                           >
                             <Trash2 size={16} />
@@ -197,77 +229,62 @@ const TrainerClasses = () => {
           </Card>
         )}
 
-        {/* Modal */}
         <FormModal
           isOpen={isModalOpen}
           title={editingClass ? 'Edit Class' : 'Create New Class'}
           onClose={() => {
             setIsModalOpen(false);
             setEditingClass(null);
-            setFormData({ name: '', category: '', capacity: '', description: '' });
+            setFormData(initialForm);
             setErrors({});
           }}
-          onSubmit={handleSave}
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSave();
+          }}
         >
-          {errors.general && (
-            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 text-red-300 rounded">
-              {errors.general}
-            </div>
-          )}
           <FormInput
-            name="name"
             label="Class Name"
-            placeholder="e.g., Yoga 101"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            value={formData.class_name}
+            onChange={(e) => setFormData({ ...formData, class_name: e.target.value })}
+            error={errors.class_name}
             required
           />
           <FormInput
-            name="category"
-            label="Category"
+            label="Difficulty Level"
             type="select"
-            options={[
-              { label: 'Yoga', value: 'yoga' },
-              { label: 'Pilates', value: 'pilates' },
-              { label: 'Cardio', value: 'cardio' },
-              { label: 'Strength', value: 'strength' },
-              { label: 'HIIT', value: 'hiit' },
-              { label: 'Zumba', value: 'zumba' },
-            ]}
-            value={formData.category}
-            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+            options={difficultyOptions}
+            value={formData.difficulty_level}
+            onChange={(e) => setFormData({ ...formData, difficulty_level: e.target.value })}
+            error={errors.difficulty_level}
             required
           />
           <FormInput
-            name="capacity"
-            label="Capacity"
+            label="Max Participants"
             type="number"
-            placeholder="20"
-            value={formData.capacity}
-            onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
+            value={formData.max_participants}
+            onChange={(e) => setFormData({ ...formData, max_participants: e.target.value })}
+            error={errors.max_participants}
             required
           />
           <FormInput
-            name="description"
             label="Description"
             type="textarea"
-            placeholder="Describe your class..."
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           />
         </FormModal>
 
-        {/* Confirm Delete */}
         <ConfirmDialog
           isOpen={isConfirmOpen}
-          title="Delete Class?"
-          message="Are you sure you want to delete this class? This action cannot be undone."
+          title="Delete Class"
+          message={`Are you sure you want to delete ${classToDelete?.class_name || 'this class'}?`}
           onConfirm={handleConfirmDelete}
           onCancel={() => {
             setIsConfirmOpen(false);
             setClassToDelete(null);
           }}
-          dangerous
+          isDangerous
         />
       </div>
     </div>

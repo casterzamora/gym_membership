@@ -16,12 +16,34 @@ use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\EquipmentUsage;
 use App\Models\MembershipUpgrade;
+use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        // Create default system users for admin/trainer dashboard login.
+        User::firstOrCreate(
+            ['email' => 'admin@gym.com'],
+            [
+                'name' => 'Admin User',
+                'password' => Hash::make('password'),
+                'role' => 'admin',
+                'email_verified_at' => now(),
+            ]
+        );
+
+        User::firstOrCreate(
+            ['email' => 'trainer0@gym.com'],
+            [
+                'name' => 'Trainer User',
+                'password' => Hash::make('password'),
+                'role' => 'trainer',
+                'email_verified_at' => now(),
+            ]
+        );
+
         // Payment methods are already seeded in migration, but verify they exist
         if (PaymentMethod::count() === 0) {
             PaymentMethod::insert([
@@ -212,6 +234,8 @@ class DatabaseSeeder extends Seeder
         }
 
         echo "\n✅ Database seeded successfully!\n";
+        echo "✅ Admin user: admin@gym.com / password\n";
+        echo "✅ Trainer user: trainer0@gym.com / password\n";
         echo "✅ Demo member created: demo@gym.com / password\n";
         echo "✅ $i test members created (member1@gym.com through member20@gym.com / password)\n";
     }

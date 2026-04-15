@@ -20,6 +20,9 @@ export default function Profile() {
   const [allPlans, setAllPlans] = useState([])
   const [currentPlan, setCurrentPlan] = useState(null)
   const [paymentHistory, setPaymentHistory] = useState([])
+  const [renewing, setRenewing] = useState(false)
+  const [upgrading, setUpgrading] = useState(false)
+  const [upgradePlanId, setUpgradePlanId] = useState('')
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -115,6 +118,40 @@ export default function Profile() {
     }
   }
 
+  const handleRenewMembership = async () => {
+    if (!memberData?.id) return
+
+    try {
+      setRenewing(true)
+      await membersAPI.renew(memberData.id)
+      toast.success('Membership renewed successfully')
+      fetchProfileData()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to renew membership')
+    } finally {
+      setRenewing(false)
+    }
+  }
+
+  const handleUpgradeMembership = async () => {
+    if (!memberData?.id || !upgradePlanId) {
+      toast.error('Please select a plan to upgrade')
+      return
+    }
+
+    try {
+      setUpgrading(true)
+      await membersAPI.upgrade(memberData.id, { new_plan_id: Number(upgradePlanId) })
+      toast.success('Membership upgraded successfully')
+      setUpgradePlanId('')
+      fetchProfileData()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to upgrade membership')
+    } finally {
+      setUpgrading(false)
+    }
+  }
+
   if (authLoading || loading) {
     return (
       <div className="pt-20 min-h-screen bg-dark-bg flex items-center justify-center">
@@ -135,39 +172,39 @@ export default function Profile() {
         </div>
 
         {/* Profile Card */}
-        <div className="bg-dark-secondary border border-gold-bright/20 rounded-lg p-8">
+        <div className="bg-dark-secondary border border-gold-600/20 rounded-lg p-8 shadow-xl shadow-black/20">
           {/* User Avatar */}
           <div className="text-center mb-8">
-            <div className="w-24 h-24 mx-auto bg-gradient-to-br from-gold-500 to-gold-600 rounded-full flex items-center justify-center mb-4">
-              <span className="text-5xl">💪</span>
+            <div className="w-24 h-24 mx-auto bg-gold-600 rounded-full flex items-center justify-center mb-4 border border-gold-500/80">
+              <span className="text-4xl text-black font-bold">EG</span>
             </div>
             <h2 className="text-2xl font-bold text-white">{user?.name}</h2>
             <p className="text-gray-400">{user?.email}</p>
           </div>
 
           {/* Membership Info Summary */}
-          <div className="mb-8 p-6 bg-dark-bg rounded border border-gold-bright/20">
+          <div className="mb-8 p-6 bg-dark-bg rounded border border-gold-600/20">
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <div className="text-gold-bright text-sm font-bold mb-1">CURRENT PLAN</div>
+                <div className="text-gold-400 text-sm font-bold mb-1">CURRENT PLAN</div>
                 <div className="text-white">{currentPlan?.plan_name || 'N/A'}</div>
               </div>
               <div>
-                <div className="text-gold-bright text-sm font-bold mb-1">STATUS</div>
+                <div className="text-gold-400 text-sm font-bold mb-1">STATUS</div>
                 <div className="flex items-center gap-2">
                   <CheckCircle size={16} className="text-green-400" />
                   <span className="text-white">Active</span>
                 </div>
               </div>
               <div>
-                <div className="text-gold-bright text-sm font-bold mb-1">MEMBER SINCE</div>
+                <div className="text-gold-400 text-sm font-bold mb-1">MEMBER SINCE</div>
                 <div className="text-white">
                   {memberData?.created_at ? new Date(memberData.created_at).toLocaleDateString() : 'N/A'}
                 </div>
               </div>
               <div>
-                <div className="text-gold-bright text-sm font-bold mb-1">PRICE</div>
-                <div className="text-gold-bright font-bold">PHP {currentPlan?.price || '0'}/{currentPlan?.duration || 'month'}</div>
+                <div className="text-gold-400 text-sm font-bold mb-1">PRICE</div>
+                <div className="text-gold-300 font-bold">PHP {currentPlan?.price || '0'}/{currentPlan?.duration || 'month'}</div>
               </div>
             </div>
           </div>
@@ -179,7 +216,7 @@ export default function Profile() {
               {!editMode && (
                 <button
                   onClick={() => setEditMode(true)}
-                  className="flex items-center gap-2 text-gold-bright hover:text-gold-400 transition"
+                  className="flex items-center gap-2 text-gold-300 hover:text-gold-200 transition"
                 >
                   <Edit2 size={18} />
                   <span>Edit</span>
@@ -266,7 +303,7 @@ export default function Profile() {
           </div>
 
           {/* Edit/Save/Logout Actions */}
-          <div className="flex gap-4 pt-6 border-t border-gold-bright/20">
+          <div className="flex gap-4 pt-6 border-t border-gold-600/20">
             {editMode ? (
               <>
                 <button
@@ -279,7 +316,7 @@ export default function Profile() {
                 </button>
                 <button
                   onClick={handleCancel}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-700 text-white font-bold rounded border border-gold-bright/20 hover:bg-gray-600 transition"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-700 text-white font-bold rounded border border-gold-600/20 hover:bg-gray-600 transition"
                 >
                   <X size={18} />
                   Cancel
@@ -288,7 +325,7 @@ export default function Profile() {
             ) : (
               <button
                 onClick={handleLogout}
-                className="flex items-center justify-center gap-2 ml-auto px-6 py-3 bg-gray-700 text-white font-bold rounded border border-gold-bright/20 hover:bg-gray-600 transition"
+                className="flex items-center justify-center gap-2 ml-auto px-6 py-3 bg-gray-700 text-white font-bold rounded border border-gold-600/20 hover:bg-gray-600 transition"
               >
                 <LogOut size={18} />
                 Sign Out
@@ -303,10 +340,10 @@ export default function Profile() {
           
           {/* Current Plan Details */}
           {currentPlan && (
-            <div className="bg-gradient-to-br from-gold-600/20 to-gold-500/10 border border-gold-500/30 rounded-lg p-8 mb-8">
+            <div className="bg-dark-secondary border border-gold-500/30 rounded-lg p-8 mb-8">
               <div className="flex items-start justify-between mb-6">
                 <div>
-                  <h3 className="text-3xl font-bold text-gold-bright mb-2">{currentPlan.plan_name}</h3>
+                  <h3 className="text-3xl font-bold text-gold-300 mb-2">{currentPlan.plan_name}</h3>
                   <p className="text-gray-300">{currentPlan.description}</p>
                 </div>
                 <div className="flex items-center gap-2 px-4 py-2 bg-green-500/20 border border-green-500 rounded-full">
@@ -319,16 +356,26 @@ export default function Profile() {
                 <div>
                   <p className="text-gold-500 text-sm font-bold mb-1">PRICE</p>
                   <p className="text-2xl font-bold text-white">PHP {currentPlan.price}</p>
-                  <p className="text-xs text-gray-400">per {currentPlan.duration}</p>
+                  <p className="text-xs text-gray-400">per {currentPlan.duration_months || currentPlan.duration || 'N/A'} month(s)</p>
                 </div>
                 <div>
                   <p className="text-gold-500 text-sm font-bold mb-1">DURATION</p>
-                  <p className="text-2xl font-bold text-white">{currentPlan.duration}</p>
+                  <p className="text-2xl font-bold text-white">{currentPlan.duration_months || currentPlan.duration || 'N/A'} month(s)</p>
                 </div>
                 <div>
                   <p className="text-gold-500 text-sm font-bold mb-1">MEMBER SINCE</p>
                   <p className="text-white font-semibold">{memberData?.created_at ? new Date(memberData.created_at).toLocaleDateString() : 'N/A'}</p>
                 </div>
+              </div>
+
+              <div className="mt-6">
+                <button
+                  onClick={handleRenewMembership}
+                  disabled={renewing}
+                  className="px-5 py-2.5 bg-green-600 text-white font-semibold rounded hover:bg-green-700 transition disabled:opacity-50"
+                >
+                  {renewing ? 'Renewing...' : 'Renew Current Plan'}
+                </button>
               </div>
             </div>
           )}
@@ -344,13 +391,33 @@ export default function Profile() {
                     <p className="text-gray-400 text-sm mb-4">{plan.description}</p>
                     <div className="py-4 border-y border-gray-700 mb-4">
                       <p className="text-2xl font-bold text-white">PHP {plan.price}</p>
-                      <p className="text-xs text-gray-400">per {plan.duration}</p>
+                      <p className="text-xs text-gray-400">per {plan.duration_months || plan.duration || 'N/A'} month(s)</p>
                     </div>
-                    <button className="w-full px-4 py-2 bg-gold-600 text-black font-bold rounded hover:bg-gold-500 transition">
-                      Switch to this Plan
-                    </button>
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => setUpgradePlanId(String(plan.id))}
+                        className={`w-full px-4 py-2 font-bold rounded transition ${
+                          String(plan.id) === String(upgradePlanId)
+                            ? 'bg-gold-500 text-black'
+                            : 'bg-gold-600 text-black hover:bg-gold-500'
+                        }`}
+                      >
+                        {String(plan.id) === String(upgradePlanId) ? 'Selected for Upgrade' : 'Select This Plan'}
+                      </button>
+                    </div>
                   </div>
                 ))}
+              </div>
+
+              <div className="mt-6 flex items-center gap-3">
+                <button
+                  onClick={handleUpgradeMembership}
+                  disabled={upgrading || !upgradePlanId}
+                  className="px-5 py-2.5 bg-gold-600 text-black font-semibold rounded hover:bg-gold-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {upgrading ? 'Upgrading...' : 'Upgrade Membership'}
+                </button>
+                {!upgradePlanId && <span className="text-sm text-gray-400">Select a plan first</span>}
               </div>
             </div>
           )}

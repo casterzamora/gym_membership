@@ -1,6 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --surface-0: #0f0f0f;
+  --surface-1: #171717;
+  --surface-2: #1f1f1f;
+  --line-soft: rgba(245, 158, 11, 0.18);
+  --line-strong: rgba(245, 158, 11, 0.4);
+  --gold-soft: #f5d27b;
+  --gold-core: #f59e0b;
+  --text-primary: #f7f7f5;
+  --text-secondary: #b8b8b2;
+}
 
 * {
   margin: 0;
@@ -9,9 +23,22 @@
 }
 
 body {
-  @apply bg-gray-900 text-gray-100 font-sans;
+  @apply bg-gray-900 text-gray-100;
+  font-family: 'Manrope', sans-serif;
+  color: var(--text-primary);
+  background: radial-gradient(circle at 20% 0%, #1b1b1b 0%, #0f0f0f 45%);
 }
 
 html {
   scroll-behavior: smooth;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Barlow Condensed', sans-serif;
+  letter-spacing: 0.02em;
 }

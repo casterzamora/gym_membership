@@ -17,6 +17,7 @@ const AdminLayout = ({ children }) => {
 
   const adminMenuItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: BarChart3 },
+    { name: 'Reports', path: '/admin/reports', icon: BarChart3 },
     { name: 'Members', path: '/admin/members', icon: Users },
     { name: 'Trainers', path: '/admin/trainers', icon: Dumbbell },
     { name: 'Classes', path: '/admin/classes', icon: BookOpen },

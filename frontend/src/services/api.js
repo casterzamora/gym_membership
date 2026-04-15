@@ -42,6 +42,8 @@ export const membersAPI = {
   get: (id) => api.get(`/v1/members/${id}`),
   create: (data) => api.post('/v1/members', data),
   update: (id, data) => api.put(`/v1/members/${id}`, data),
+  renew: (id, data = {}) => api.post(`/v1/members/${id}/renew`, data),
+  upgrade: (id, data) => api.post(`/v1/members/${id}/upgrade`, data),
   delete: (id) => api.delete(`/v1/members/${id}`),
 }
 
@@ -56,6 +58,9 @@ export const classesAPI = {
 export const schedulesAPI = {
   list: () => api.get('/v1/schedules'),
   get: (id) => api.get(`/v1/schedules/${id}`),
+  create: (data) => api.post('/v1/schedules', data),
+  update: (id, data) => api.put(`/v1/schedules/${id}`, data),
+  delete: (id) => api.delete(`/v1/schedules/${id}`),
 }
 
 export const attendanceAPI = {
@@ -75,6 +80,8 @@ export const plansAPI = {
 export const trainersAPI = {
   list: () => api.get('/v1/trainers'),
   get: (id) => api.get(`/v1/trainers/${id}`),
+  workload: (id) => api.get(`/v1/trainers/${id}/workload`),
+  workloadSummary: () => api.get('/v1/trainers/workload-summary'),
   create: (data) => api.post('/v1/trainers', data),
   update: (id, data) => api.put(`/v1/trainers/${id}`, data),
   delete: (id) => api.delete(`/v1/trainers/${id}`),
@@ -91,6 +98,20 @@ export const equipmentAPI = {
 export const paymentsAPI = {
   list: () => api.get('/v1/payments'),
   get: (id) => api.get(`/v1/payments/${id}`),
+  create: (data) => api.post('/v1/payments', data),
+  update: (id, data) => api.put(`/v1/payments/${id}`, data),
+  delete: (id) => api.delete(`/v1/payments/${id}`),
+}
+
+export const paymentMethodsAPI = {
+  list: () => api.get('/v1/payment-methods'),
+  get: (id) => api.get(`/v1/payment-methods/${id}`),
+}
+
+export const reportsAPI = {
+  revenue: (params = {}) => api.get('/v1/reports/revenue', { params }),
+  classPopularity: (params = {}) => api.get('/v1/reports/class-popularity', { params }),
+  lowAttendanceMembers: (params = {}) => api.get('/v1/reports/low-attendance-members', { params }),
 }
 
 export default {
@@ -103,5 +124,7 @@ export default {
   trainersAPI,
   equipmentAPI,
   paymentsAPI,
+  paymentMethodsAPI,
+  reportsAPI,
   request: api,
 }

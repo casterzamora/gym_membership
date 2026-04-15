@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StorePaymentRequest;
 use App\Http\Requests\UpdatePaymentRequest;
+use App\Models\Member;
 use App\Models\Payment;
 use App\Traits\ApiResponse;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class PaymentController extends Controller
 {
@@ -15,9 +18,15 @@ class PaymentController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $payments = Payment::with('member', 'paymentMethod')->paginate(15);
+        $paymentsQuery = Payment::with('member', 'paymentMethod');
+
+        if ($request->user() instanceof Member) {
+            $paymentsQuery->where('member_id', $request->user()->id);
+        }
+
+        $payments = $paymentsQuery->paginate(15);
         return $this->paginated($payments, 'Payments retrieved successfully');
     }
 
@@ -27,7 +36,17 @@ class PaymentController extends Controller
     public function store(StorePaymentRequest $request)
     {
         try {
-            $payment = Payment::create($request->validated());
+            $data = $request->validated();
+
+            if ($this->hasCoverageOverlap(
+                (int) $data['member_id'],
+                Carbon::parse($data['coverage_start']),
+                Carbon::parse($data['coverage_end'])
+            )) {
+                return $this->error('Payment coverage overlaps with an existing payment period', null, 422);
+            }
+
+            $payment = Payment::create($data);
             return $this->success($payment->load('member', 'paymentMethod'), 'Payment recorded successfully', 201);
         } catch (\Exception $e) {
             return $this->error('Failed to record payment: ' . $e->getMessage(), null, 500);
@@ -37,8 +56,12 @@ class PaymentController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Payment $payment)
+    public function show(Request $request, Payment $payment)
     {
+        if ($request->user() instanceof Member && (int) $payment->member_id !== (int) $request->user()->id) {
+            return $this->error('Forbidden: members can only access their own payments', null, 403);
+        }
+
         return $this->success($payment->load('member', 'paymentMethod'), 'Payment retrieved successfully');
     }
 
@@ -48,7 +71,21 @@ class PaymentController extends Controller
     public function update(UpdatePaymentRequest $request, Payment $payment)
     {
         try {
-            $payment->update($request->validated());
+            $data = $request->validated();
+
+            $memberId = (int) ($data['member_id'] ?? $payment->member_id);
+            $coverageStart = Carbon::parse($data['coverage_start'] ?? $payment->coverage_start);
+            $coverageEnd = Carbon::parse($data['coverage_end'] ?? $payment->coverage_end);
+
+            if ($coverageEnd->lte($coverageStart)) {
+                return $this->error('coverage_end must be after coverage_start', null, 422);
+            }
+
+            if ($this->hasCoverageOverlap($memberId, $coverageStart, $coverageEnd, (int) $payment->id)) {
+                return $this->error('Payment coverage overlaps with an existing payment period', null, 422);
+            }
+
+            $payment->update($data);
             return $this->success($payment->load('member', 'paymentMethod'), 'Payment updated successfully');
         } catch (\Exception $e) {
             return $this->error('Failed to update payment: ' . $e->getMessage(), null, 500);
@@ -66,5 +103,19 @@ class PaymentController extends Controller
         } catch (\Exception $e) {
             return $this->error('Failed to delete payment: ' . $e->getMessage(), null, 500);
         }
+    }
+
+    private function hasCoverageOverlap(int $memberId, Carbon $start, Carbon $end, ?int $excludePaymentId = null): bool
+    {
+        $query = Payment::query()
+            ->where('member_id', $memberId)
+            ->whereDate('coverage_start', '<=', $end->toDateString())
+            ->whereDate('coverage_end', '>=', $start->toDateString());
+
+        if ($excludePaymentId !== null) {
+            $query->where('id', '!=', $excludePaymentId);
+        }
+
+        return $query->exists();
     }
 }

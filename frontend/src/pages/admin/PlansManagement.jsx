@@ -16,6 +16,7 @@ const PlansManagement = () => {
     plan_name: '',
     price: '',
     duration_months: '',
+    max_classes_per_week: '',
     description: '',
   });
   const [errors, setErrors] = useState({});
@@ -43,6 +44,7 @@ const PlansManagement = () => {
         plan_name: plan.plan_name || '',
         price: plan.price || '',
         duration_months: plan.duration_months || '',
+        max_classes_per_week: plan.max_classes_per_week || '',
         description: plan.description || '',
       });
     } else {
@@ -51,6 +53,7 @@ const PlansManagement = () => {
         plan_name: '',
         price: '',
         duration_months: '',
+        max_classes_per_week: '',
         description: '',
       });
     }
@@ -61,7 +64,7 @@ const PlansManagement = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingPlan(null);
-    setFormData({ plan_name: '', price: '', duration_months: '', description: '' });
+    setFormData({ plan_name: '', price: '', duration_months: '', max_classes_per_week: '', description: '' });
     setErrors({});
   };
 
@@ -70,6 +73,7 @@ const PlansManagement = () => {
     if (!formData.plan_name.trim()) newErrors.plan_name = 'Plan name is required';
     if (!formData.price || formData.price <= 0) newErrors.price = 'Valid price is required';
     if (!formData.duration_months || formData.duration_months <= 0) newErrors.duration_months = 'Valid duration is required';
+    if (!formData.max_classes_per_week || formData.max_classes_per_week <= 0) newErrors.max_classes_per_week = 'Valid max classes per week is required';
     if (!formData.description.trim()) newErrors.description = 'Description is required';
     
     setErrors(newErrors);
@@ -123,6 +127,7 @@ const PlansManagement = () => {
     { key: 'plan_name', label: 'Plan Name' },
     { key: 'price', label: 'Price', render: (value) => `PHP ${value}` },
     { key: 'duration_months', label: 'Duration (Months)' },
+    { key: 'max_classes_per_week', label: 'Max Classes / Week' },
     { key: 'description', label: 'Description' },
   ];
 
@@ -185,6 +190,15 @@ const PlansManagement = () => {
           onChange={(e) => setFormData({ ...formData, duration_months: e.target.value })}
           error={errors.duration_months}
           placeholder="e.g., 1 for monthly, 12 for annual"
+          required
+        />
+        <FormInput
+          label="Max Classes Per Week"
+          type="number"
+          value={formData.max_classes_per_week}
+          onChange={(e) => setFormData({ ...formData, max_classes_per_week: e.target.value })}
+          error={errors.max_classes_per_week}
+          placeholder="e.g., 3"
           required
         />
         <FormInput

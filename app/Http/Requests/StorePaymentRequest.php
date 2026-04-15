@@ -16,7 +16,7 @@ class StorePaymentRequest extends FormRequest
         return [
             'member_id' => 'required|exists:members,id',
             'amount_paid' => 'required|numeric|min:0.01|max:99999.99',
-            'payment_date' => 'required|date',
+            'payment_date' => 'required|date|before_or_equal:today',
             'payment_method_id' => 'required|exists:payment_methods,payment_method_id',
             'coverage_start' => 'required|date',
             'coverage_end' => 'required|date|after:coverage_start',

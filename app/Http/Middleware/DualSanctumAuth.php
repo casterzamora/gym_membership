@@ -22,10 +22,6 @@ class DualSanctumAuth
             return response()->json(['success' => false, 'message' => 'No token provided'], 401);
         }
 
-        if (!$token) {
-            return response()->json(['success' => false, 'message' => 'No token provided'], 401);
-        }
-
         // Find the personal access token
         $personalAccessToken = PersonalAccessToken::findToken($token);
 

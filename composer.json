@@ -49,6 +49,24 @@
             "@php artisan config:clear --ansi",
             "@php artisan test"
         ],
+        "test:prepare": [
+            "@php prepare_test_db.php",
+            "@php artisan migrate:fresh --seed --env=testing --force"
+        ],
+        "test:mysql": [
+            "@composer test:prepare",
+            "@php artisan test --env=testing"
+        ],
+        "db:check-structure": [
+            "@php check_db_structure.php"
+        ],
+        "db:check-fks": [
+            "@php check_foreign_keys.php"
+        ],
+        "db:check": [
+            "@composer db:check-structure",
+            "@composer db:check-fks"
+        ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"

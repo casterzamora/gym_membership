@@ -3,7 +3,7 @@ import { AuthContext } from '@/context/AuthContext'
 import { membersAPI, schedulesAPI, attendanceAPI } from '@/services/api'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Calendar, Flame, Zap, TrendingUp, ArrowRight } from 'lucide-react'
 import { Button, StatCard, Card, Badge, LoadingSpinner } from '@/components'
 
@@ -147,10 +147,10 @@ export default function Dashboard() {
       <div className="w-full px-4 py-8">
         {/* Header with Welcome Animation */}
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-12">
-          <h1 className="text-5xl font-black bg-gradient-to-r from-gold-bright to-accent-orange bg-clip-text text-transparent mb-2">
-            Welcome back, {user?.name}! 💪
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">
+            Welcome back, {user?.name}
           </h1>
-          <p className="text-gray-400 text-lg">Here's your fitness progress at a glance</p>
+          <p className="text-gray-400 text-lg">Here is your performance snapshot and today&apos;s training lineup.</p>
         </motion.div>
 
         {/* Stats Grid */}
@@ -203,7 +203,7 @@ export default function Dashboard() {
                 <XAxis dataKey="name" stroke="#999" />
                 <YAxis stroke="#999" />
                 <Tooltip contentStyle={{ backgroundColor: '#1F1F1F', border: '1px solid #FFD700' }} />
-                <Bar dataKey="attendance" fill="#FFD700" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="attendance" fill="#f59e0b" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </Card>
@@ -290,7 +290,7 @@ export default function Dashboard() {
                       </div>
                       <div className="w-full h-1.5 bg-dark-secondary rounded-full overflow-hidden">
                         <div 
-                          className="h-full bg-gradient-to-r from-gold-bright to-accent-orange"
+                          className="h-full bg-gold-500"
                           style={{ width: `${((schedule.current_enrollment || 0) / schedule.fitnessClass?.max_participants) * 100}%` }}
                         />
                       </div>

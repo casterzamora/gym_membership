@@ -1,4 +1,4 @@
-import { useContext } from 'react'
+import { lazy, Suspense, useContext } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthContext } from '@/context/AuthContext'
 import MemberLayout from '@/layouts/MemberLayout'
@@ -6,29 +6,40 @@ import AdminLayout from '@/layouts/AdminLayout'
 import TrainerLayout from '@/layouts/TrainerLayout'
 
 // Pages - Public
-import Landing from '@/pages/Landing'
-import Login from '@/pages/Login'
-import Register from '@/pages/Register'
-import About from '@/pages/About'
+const Landing = lazy(() => import('@/pages/Landing'))
+const Login = lazy(() => import('@/pages/Login'))
+const Register = lazy(() => import('@/pages/Register'))
+const About = lazy(() => import('@/pages/About'))
 
 // Pages - Member
-import Dashboard from '@/pages/member/Dashboard'
-import Classes from '@/pages/member/Classes'
-import Profile from '@/pages/member/Profile'
+const Dashboard = lazy(() => import('@/pages/member/Dashboard'))
+const Classes = lazy(() => import('@/pages/member/Classes'))
+const Profile = lazy(() => import('@/pages/member/Profile'))
+const AttendanceHistory = lazy(() => import('@/pages/member/AttendanceHistory'))
 
 // Pages - Admin
-import AdminDashboard from '@/pages/admin/AdminDashboard'
-import MembersManagement from '@/pages/admin/MembersManagement'
-import TrainersManagement from '@/pages/admin/TrainersManagement'
-import ClassesManagement from '@/pages/admin/ClassesManagement'
-import EquipmentManagement from '@/pages/admin/EquipmentManagement'
-import PlansManagement from '@/pages/admin/PlansManagement'
-import PaymentsManagement from '@/pages/admin/PaymentsManagement'
+const AdminDashboard = lazy(() => import('@/pages/admin/AdminDashboard'))
+const MembersManagement = lazy(() => import('@/pages/admin/MembersManagement'))
+const TrainersManagement = lazy(() => import('@/pages/admin/TrainersManagement'))
+const ClassesManagement = lazy(() => import('@/pages/admin/ClassesManagement'))
+const EquipmentManagement = lazy(() => import('@/pages/admin/EquipmentManagement'))
+const PlansManagement = lazy(() => import('@/pages/admin/PlansManagement'))
+const PaymentsManagement = lazy(() => import('@/pages/admin/PaymentsManagement'))
+const ReportsManagement = lazy(() => import('@/pages/admin/ReportsManagement'))
 
 // Pages - Trainer
-import TrainerDashboard from '@/pages/trainer/TrainerDashboard'
-import TrainerClasses from '@/pages/trainer/TrainerClasses'
-import TrainerMembers from '@/pages/trainer/TrainerMembers'
+const TrainerDashboard = lazy(() => import('@/pages/trainer/TrainerDashboard'))
+const TrainerClasses = lazy(() => import('@/pages/trainer/TrainerClasses'))
+const TrainerMembers = lazy(() => import('@/pages/trainer/TrainerMembers'))
+const TrainerSchedules = lazy(() => import('@/pages/trainer/TrainerSchedules'))
+
+function RouteLoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className="text-gray-400">Loading page...</div>
+    </div>
+  )
+}
 
 // Protected Route Wrapper - For Members
 function MemberRoute({ children }) {
@@ -139,12 +150,13 @@ export default function App() {
 
   return (
     <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<Landing />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+      <Suspense fallback={<RouteLoadingFallback />}>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<Landing />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
         {/* Member Routes */}
         <Route
@@ -168,6 +180,14 @@ export default function App() {
           element={
             <MemberRoute>
               <Profile />
+            </MemberRoute>
+          }
+        />
+        <Route
+          path="/attendance"
+          element={
+            <MemberRoute>
+              <AttendanceHistory />
             </MemberRoute>
           }
         />
@@ -229,6 +249,14 @@ export default function App() {
             </AdminRoute>
           }
         />
+        <Route
+          path="/admin/reports"
+          element={
+            <AdminRoute>
+              <ReportsManagement />
+            </AdminRoute>
+          }
+        />
 
         {/* Trainer Routes */}
         <Route
@@ -255,10 +283,19 @@ export default function App() {
             </TrainerRoute>
           }
         />
+        <Route
+          path="/trainer/schedules"
+          element={
+            <TrainerRoute>
+              <TrainerSchedules />
+            </TrainerRoute>
+          }
+        />
 
-        {/* Catch all - redirect to home */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          {/* Catch all - redirect to home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }

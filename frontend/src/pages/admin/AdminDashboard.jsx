@@ -16,6 +16,8 @@ const AdminDashboard = () => {
   });
   const [loading, setLoading] = useState(true);
   const [chartData, setChartData] = useState([]);
+  const [workloadSummary, setWorkloadSummary] = useState([]);
+  const [classPopularity, setClassPopularity] = useState([]);
 
   useEffect(() => {
     fetchStats();
@@ -31,6 +33,12 @@ const AdminDashboard = () => {
         api.paymentsAPI?.list?.().catch(() => ({ data: { data: [] } })),
       ]);
 
+      const [summaryRes, revenueRes, classPopularityRes] = await Promise.all([
+        api.trainersAPI.workloadSummary().catch(() => ({ data: { data: [] } })),
+        api.reportsAPI.revenue({ group_by: 'month' }).catch(() => ({ data: { data: { series: [], total_revenue: 0 } } })),
+        api.reportsAPI.classPopularity({ limit: 5 }).catch(() => ({ data: { data: [] } })),
+      ]);
+
       const members = membersRes.data.data?.length || 0;
       const trainers = trainersRes.data.data?.length || 0;
       const classes = classesRes.data.data?.length || 0;
@@ -44,13 +52,21 @@ const AdminDashboard = () => {
         totalRevenue: revenue,
       });
 
-      // Generate mock chart data for last 7 days
-      const data = Array.from({ length: 7 }, (_, i) => ({
-        day: `Day ${i + 1}`,
-        members: Math.floor(Math.random() * members),
-        revenue: Math.floor(Math.random() * 5000),
+      const revenueSeries = revenueRes.data?.data?.series || [];
+      const realRevenue = Number(revenueRes.data?.data?.total_revenue || 0);
+
+      setStats((prev) => ({
+        ...prev,
+        totalRevenue: realRevenue,
       }));
-      setChartData(data);
+
+      setChartData(revenueSeries.map((row) => ({
+        day: row.period,
+        revenue: Number(row.total_revenue || 0),
+        payments: Number(row.payment_count || 0),
+      })));
+      setWorkloadSummary(summaryRes.data?.data || []);
+      setClassPopularity(classPopularityRes.data?.data || []);
     } catch (err) {
       console.error('Failed to load stats', err);
     } finally {
@@ -116,7 +132,7 @@ const AdminDashboard = () => {
       {/* Charts */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <div className="bg-gray-900/50 border border-gray-700 rounded-xl shadow-lg p-6">
-          <h2 className="text-xl font-bold text-white mb-6">System Activity</h2>
+          <h2 className="text-xl font-bold text-white mb-6">Revenue Trend</h2>
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={chartData}>
@@ -125,12 +141,81 @@ const AdminDashboard = () => {
                 <YAxis stroke="#999" />
                 <Tooltip contentStyle={{ backgroundColor: '#1F1F1F', border: '1px solid #FFD700' }} />
                 <Legend wrapperStyle={{ color: '#999' }} />
-                <Line type="monotone" dataKey="members" stroke="#3b82f6" />
-                <Line type="monotone" dataKey="revenue" stroke="#10b981" />
+                <Line type="monotone" dataKey="revenue" stroke="#10b981" name="Revenue" />
+                <Line type="monotone" dataKey="payments" stroke="#3b82f6" name="Payments" />
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-center py-12 text-gray-400">Loading chart data...</div>
+            <div className="text-center py-12 text-gray-400">No revenue trend data available.</div>
+          )}
+        </div>
+      </motion.div>
+
+      {/* Trainer Workload Summary */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="bg-gray-900/50 border border-gray-700 rounded-xl shadow-lg p-6">
+          <h2 className="text-xl font-bold text-white mb-4">Trainer Workload Summary</h2>
+          {workloadSummary.length === 0 ? (
+            <div className="text-gray-400 py-8 text-center">No trainer workload data available yet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-gray-700 text-gray-300 text-sm">
+                    <th className="py-3 pr-4">Trainer</th>
+                    <th className="py-3 pr-4">Classes</th>
+                    <th className="py-3 pr-4">Schedules</th>
+                    <th className="py-3 pr-4">Attendance</th>
+                    <th className="py-3 pr-4">Avg / Schedule</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {workloadSummary.map((row) => (
+                    <tr key={row.trainer_id} className="border-b border-gray-800 text-sm text-gray-100">
+                      <td className="py-3 pr-4 font-medium">{row.trainer_name}</td>
+                      <td className="py-3 pr-4">{row.total_classes}</td>
+                      <td className="py-3 pr-4">{row.total_schedules}</td>
+                      <td className="py-3 pr-4">{row.total_attendance_records}</td>
+                      <td className="py-3 pr-4">{Number(row.average_attendance_per_schedule || 0).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </motion.div>
+
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="bg-gray-900/50 border border-gray-700 rounded-xl shadow-lg p-6">
+          <h2 className="text-xl font-bold text-white mb-4">Top Class Popularity</h2>
+          {classPopularity.length === 0 ? (
+            <div className="text-gray-400 py-8 text-center">No class popularity data available yet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-gray-700 text-gray-300 text-sm">
+                    <th className="py-3 pr-4">Class</th>
+                    <th className="py-3 pr-4">Schedules</th>
+                    <th className="py-3 pr-4">Attendance</th>
+                    <th className="py-3 pr-4">Avg / Schedule</th>
+                    <th className="py-3 pr-4">Capacity Utilization</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {classPopularity.map((row) => (
+                    <tr key={row.class_id} className="border-b border-gray-800 text-sm text-gray-100">
+                      <td className="py-3 pr-4 font-medium">{row.class_name}</td>
+                      <td className="py-3 pr-4">{row.total_schedules}</td>
+                      <td className="py-3 pr-4">{row.total_attendance_records}</td>
+                      <td className="py-3 pr-4">{Number(row.average_attendance_per_schedule || 0).toFixed(2)}</td>
+                      <td className="py-3 pr-4">{Number(row.capacity_utilization_percent || 0).toFixed(2)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </motion.div>

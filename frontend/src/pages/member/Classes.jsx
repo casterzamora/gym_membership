@@ -49,12 +49,17 @@ export default function Classes() {
       console.log('✅ Attendance loaded:', attendanceRes.data.data)
       
       if (attendanceRes.data.data && memberRes.data.data) {
-        const classIds = attendanceRes.data.data
-          .filter(a => a.member_id === memberRes.data.data.id)
-          .map(a => a.class_id)
-          .filter(Boolean)
-        setEnrolledClasses([...new Set(classIds)])
-        console.log('✅ Enrolled classes:', classIds)
+        const memberAttendance = attendanceRes.data.data.filter(
+          (a) => a.member_id === memberRes.data.data.id
+        )
+
+        const scheduleIds = new Set(memberAttendance.map((a) => a.schedule_id))
+        const enrolledClassIds = (Array.isArray(classesRes.data.data) ? classesRes.data.data : [])
+          .filter((c) => Array.isArray(c.schedules) && c.schedules.some((s) => scheduleIds.has(s.id)))
+          .map((c) => c.id)
+
+        setEnrolledClasses([...new Set(enrolledClassIds)])
+        console.log('✅ Enrolled classes:', enrolledClassIds)
       }
     } catch (err) {
       console.error('❌ Error fetching data:', err)
@@ -148,11 +153,11 @@ export default function Classes() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-white mb-2 flex items-center gap-3">
-            <BookOpen className="w-10 h-10 text-gold" />
+            <BookOpen className="w-10 h-10 text-gold-400" />
             Fitness Classes
           </h1>
           <p className="text-gray-400">
-            Explore our premium workout classes and enroll to start your fitness journey
+            Explore sessions, check schedule details, and enroll with one click.
           </p>
         </div>
 
@@ -177,7 +182,7 @@ export default function Classes() {
 
               return (
                 <motion.div key={fitnessClass.id} variants={itemVariants}>
-                  <Card className="overflow-hidden hover:border-gold/30 transition cursor-pointer h-full">
+                  <Card className="overflow-hidden hover:border-gold/30 transition h-full">
                     <div className="flex justify-between items-start mb-4">
                       <h3 className="text-lg font-bold text-white flex-1">{fitnessClass.class_name}</h3>
                       <Badge variant="difficulty-beginner" size="sm">New</Badge>
@@ -213,7 +218,7 @@ export default function Classes() {
                       </div>
                       <div className="w-full h-1.5 bg-gray-700 rounded-full overflow-hidden">
                         <div 
-                          className="h-full bg-gradient-to-r from-gold to-orange-400"
+                          className="h-full bg-gold-500"
                           style={{ width: `${Math.min((fitnessClass.current_enrolled / fitnessClass.max_participants) * 100, 100)}%` }}
                         />
                       </div>
@@ -230,15 +235,25 @@ export default function Classes() {
                         ✓ Already Enrolled
                       </Button>
                     ) : (
-                      <Button 
-                        variant="primary" 
-                        className="w-full mt-4" 
-                        size="sm"
-                        onClick={() => handleEnroll(fitnessClass)}
-                        disabled={fitnessClass.is_full || enrolling}
-                      >
-                        {enrolling ? 'Enrolling...' : fitnessClass.is_full ? 'Class Full' : 'Enroll Now'}
-                      </Button>
+                      <div className="grid grid-cols-2 gap-2 mt-4">
+                        <Button
+                          variant="secondary"
+                          className="w-full"
+                          size="sm"
+                          onClick={() => setSelectedClass(fitnessClass)}
+                        >
+                          Details
+                        </Button>
+                        <Button 
+                          variant="primary" 
+                          className="w-full" 
+                          size="sm"
+                          onClick={() => handleEnroll(fitnessClass)}
+                          disabled={fitnessClass.is_full || enrolling}
+                        >
+                          {enrolling ? 'Enrolling...' : fitnessClass.is_full ? 'Class Full' : 'Enroll'}
+                        </Button>
+                      </div>
                     )}
                   </Card>
                 </motion.div>

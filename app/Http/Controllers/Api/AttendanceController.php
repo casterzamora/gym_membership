@@ -7,6 +7,9 @@ use App\Http\Requests\StoreAttendanceRequest;
 use App\Http\Requests\UpdateAttendanceRequest;
 use App\Models\Attendance;
 use App\Models\ClassSchedule;
+use App\Models\Member;
+use App\Models\Trainer;
+use App\Models\User;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 
@@ -17,9 +20,29 @@ class AttendanceController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $attendance = Attendance::with('member', 'schedule')->paginate(15);
+        $query = Attendance::with('member', 'schedule.fitnessClass');
+
+        $actor = $request->user();
+
+        if ($actor instanceof Member) {
+            $query->where('member_id', $actor->id);
+        }
+
+        if ($actor instanceof User && $actor->role === 'trainer') {
+            $trainer = $this->resolveTrainerFromUser($actor);
+
+            if (!$trainer) {
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->whereHas('schedule.fitnessClass', function ($q) use ($trainer) {
+                    $q->where('trainer_id', $trainer->id);
+                });
+            }
+        }
+
+        $attendance = $query->paginate(15);
         return $this->paginated($attendance, 'Attendance records retrieved successfully');
     }
 
@@ -29,7 +52,45 @@ class AttendanceController extends Controller
     public function store(StoreAttendanceRequest $request)
     {
         try {
-            $attendance = Attendance::create($request->validated());
+            $data = $request->validated();
+            $actor = $request->user();
+
+            if ($actor instanceof Member && (int) $actor->id !== (int) $data['member_id']) {
+                return $this->error('Forbidden: members can only record their own attendance', null, 403);
+            }
+
+            if ($actor instanceof User && $actor->role === 'trainer') {
+                $trainer = $this->resolveTrainerFromUser($actor);
+                if (!$trainer) {
+                    return $this->error('Forbidden: trainer profile not found', null, 403);
+                }
+
+                $isOwnedSchedule = ClassSchedule::query()
+                    ->where('id', $data['schedule_id'])
+                    ->whereHas('fitnessClass', function ($q) use ($trainer) {
+                        $q->where('trainer_id', $trainer->id);
+                    })
+                    ->exists();
+
+                if (!$isOwnedSchedule) {
+                    return $this->error('Forbidden: trainers can only record attendance for their own classes', null, 403);
+                }
+            }
+
+            $existing = Attendance::query()
+                ->where('member_id', $data['member_id'])
+                ->where('schedule_id', $data['schedule_id'])
+                ->first();
+
+            if ($existing) {
+                return $this->error('Attendance already exists for this member and schedule', null, 409);
+            }
+
+            if (!isset($data['recorded_at'])) {
+                $data['recorded_at'] = now();
+            }
+
+            $attendance = Attendance::create($data);
             return $this->success($attendance->load('member', 'schedule'), 'Attendance recorded successfully', 201);
         } catch (\Exception $e) {
             return $this->error('Failed to record attendance: ' . $e->getMessage(), null, 500);
@@ -39,25 +100,35 @@ class AttendanceController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show($member_id, $schedule_id)
+    public function show(Request $request, int $member_id, int $schedule_id)
     {
+        $scopeCheck = $this->enforceAttendanceScope($request->user(), $member_id, $schedule_id);
+        if ($scopeCheck !== null) {
+            return $scopeCheck;
+        }
+
         $attendance = Attendance::where('member_id', $member_id)
-            ->where('class_schedule_id', $schedule_id)
+            ->where('schedule_id', $schedule_id)
             ->first();
 
         if (!$attendance) {
             return $this->notFound('Attendance record not found');
         }
 
-        return $this->success($attendance->load('member', 'schedules'), 'Attendance record retrieved successfully');
+        return $this->success($attendance->load('member', 'schedule.fitnessClass'), 'Attendance record retrieved successfully');
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateAttendanceRequest $request, $member_id, $schedule_id)
+    public function update(UpdateAttendanceRequest $request, int $member_id, int $schedule_id)
     {
         try {
+            $scopeCheck = $this->enforceAttendanceScope($request->user(), $member_id, $schedule_id);
+            if ($scopeCheck !== null) {
+                return $scopeCheck;
+            }
+
             $attendance = Attendance::where('member_id', $member_id)
                 ->where('schedule_id', $schedule_id)
                 ->first();
@@ -76,9 +147,14 @@ class AttendanceController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy($member_id, $schedule_id)
+    public function destroy(Request $request, int $member_id, int $schedule_id)
     {
         try {
+            $scopeCheck = $this->enforceAttendanceScope($request->user(), $member_id, $schedule_id);
+            if ($scopeCheck !== null) {
+                return $scopeCheck;
+            }
+
             $attendance = Attendance::where('member_id', $member_id)
                 ->where('schedule_id', $schedule_id)
                 ->first();
@@ -105,18 +181,56 @@ class AttendanceController extends Controller
         ]);
 
         try {
-            \Log::info('CheckIn attempt:', $validated);
+            $actor = $request->user();
+
+            if ($actor instanceof Member && (int) $actor->id !== (int) $validated['member_id']) {
+                return $this->error('Forbidden: members can only check in themselves', null, 403);
+            }
+
+            $member = Member::find($validated['member_id']);
+            if (!$member || $member->membership_status !== 'active') {
+                return $this->error('Membership is not active', null, 403);
+            }
+
+            if ($member->membership_end && $member->membership_end->lt(now()->startOfDay())) {
+                return $this->error('Membership has expired', null, 403);
+            }
+
+            if ($actor instanceof User && $actor->role === 'trainer') {
+                $trainer = $this->resolveTrainerFromUser($actor);
+                if (!$trainer) {
+                    return $this->error('Forbidden: trainer profile not found', null, 403);
+                }
+
+                $ownsClass = ClassSchedule::query()
+                    ->where('class_id', $validated['class_id'])
+                    ->whereHas('fitnessClass', function ($q) use ($trainer) {
+                        $q->where('trainer_id', $trainer->id);
+                    })
+                    ->exists();
+
+                if (!$ownsClass) {
+                    return $this->error('Forbidden: trainers can only check in members to their own classes', null, 403);
+                }
+            }
             
             // Get the next upcoming schedule for this class
             $schedule = ClassSchedule::where('class_id', $validated['class_id'])
                 ->where('class_date', '>=', now()->toDateString())
                 ->orderBy('class_date', 'asc')
+                ->orderBy('start_time', 'asc')
                 ->first();
-
-            \Log::info('Schedule found:', ['schedule_id' => $schedule?->id, 'class_date' => $schedule?->class_date]);
 
             if (!$schedule) {
                 return $this->error('No upcoming schedule found for this class', null, 404);
+            }
+
+            $capacity = (int) optional($schedule->fitnessClass)->max_participants;
+            if ($capacity > 0) {
+                $enrolledCount = Attendance::where('schedule_id', $schedule->id)->count();
+                if ($enrolledCount >= $capacity) {
+                    return $this->error('Class schedule is at full capacity', null, 422);
+                }
             }
 
             // Check if already enrolled using where clause (composite key safe)
@@ -126,7 +240,6 @@ class AttendanceController extends Controller
             ])->first();
 
             if ($existing) {
-                \Log::info('Member already enrolled');
                 return $this->success($existing->load('schedule.fitnessClass'), 'Already enrolled in this class', 200);
             }
 
@@ -138,16 +251,12 @@ class AttendanceController extends Controller
                 $attendance->attendance_status = 'Present';
                 $attendance->recorded_at = now();
                 $attendance->save();
-                
-                \Log::info('Attendance created:', ['member_id' => $attendance->member_id, 'schedule_id' => $attendance->schedule_id]);
 
                 return $this->success($attendance->load('schedule.fitnessClass'), 'Member enrolled successfully', 201);
             } catch (\Exception $createError) {
-                \Log::error('Failed to create attendance:', ['error' => $createError->getMessage()]);
                 throw $createError;
             }
         } catch (\Exception $e) {
-            \Log::error('CheckIn error:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return $this->error('Failed to enroll member: ' . $e->getMessage(), null, 500);
         }
     }
@@ -163,6 +272,30 @@ class AttendanceController extends Controller
         ]);
 
         try {
+            $actor = $request->user();
+
+            if ($actor instanceof Member && (int) $actor->id !== (int) $validated['member_id']) {
+                return $this->error('Forbidden: members can only check out themselves', null, 403);
+            }
+
+            if ($actor instanceof User && $actor->role === 'trainer') {
+                $trainer = $this->resolveTrainerFromUser($actor);
+                if (!$trainer) {
+                    return $this->error('Forbidden: trainer profile not found', null, 403);
+                }
+
+                $isOwnedSchedule = ClassSchedule::query()
+                    ->where('id', $validated['schedule_id'])
+                    ->whereHas('fitnessClass', function ($q) use ($trainer) {
+                        $q->where('trainer_id', $trainer->id);
+                    })
+                    ->exists();
+
+                if (!$isOwnedSchedule) {
+                    return $this->error('Forbidden: trainers can only check out members from their own classes', null, 403);
+                }
+            }
+
             $attendance = Attendance::where('member_id', $validated['member_id'])
                 ->where('schedule_id', $validated['schedule_id'])
                 ->first();
@@ -172,10 +305,46 @@ class AttendanceController extends Controller
             }
 
             // Mark as marked (can be used for tracking manual check-outs)
-            $attendance->update(['attendance_status' => 'Present']);
+            $attendance->update([
+                'attendance_status' => 'Present',
+                'recorded_at' => now(),
+            ]);
             return $this->success($attendance, 'Member check-out recorded successfully');
         } catch (\Exception $e) {
             return $this->error('Failed to process check-out: ' . $e->getMessage(), null, 500);
         }
+    }
+
+    private function enforceAttendanceScope($actor, int $memberId, int $scheduleId)
+    {
+        if ($actor instanceof Member && (int) $actor->id !== $memberId) {
+            return $this->error('Forbidden: members can only access their own attendance records', null, 403);
+        }
+
+        if ($actor instanceof User && $actor->role === 'trainer') {
+            $trainer = $this->resolveTrainerFromUser($actor);
+
+            if (!$trainer) {
+                return $this->error('Forbidden: trainer profile not found', null, 403);
+            }
+
+            $isOwnedSchedule = ClassSchedule::query()
+                ->where('id', $scheduleId)
+                ->whereHas('fitnessClass', function ($q) use ($trainer) {
+                    $q->where('trainer_id', $trainer->id);
+                })
+                ->exists();
+
+            if (!$isOwnedSchedule) {
+                return $this->error('Forbidden: trainers can only access attendance for their own classes', null, 403);
+            }
+        }
+
+        return null;
+    }
+
+    private function resolveTrainerFromUser(User $user): ?Trainer
+    {
+        return Trainer::where('email', $user->email)->first();
     }
 }

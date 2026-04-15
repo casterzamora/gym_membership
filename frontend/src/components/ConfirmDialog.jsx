@@ -17,19 +17,19 @@ const ConfirmDialog = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+      <div className="bg-dark-card border border-gold-600/20 rounded-lg shadow-xl max-w-md w-full">
         <div className="p-6">
           <div className="flex items-center gap-4 mb-4">
-            <div className={`p-3 rounded-full ${isDangerous ? 'bg-red-100' : 'bg-blue-100'}`}>
+            <div className={`p-3 rounded-full ${isDangerous ? 'bg-red-500/20' : 'bg-gold-500/20'}`}>
               <AlertTriangle 
                 size={24} 
-                className={isDangerous ? 'text-red-600' : 'text-blue-600'}
+                className={isDangerous ? 'text-red-400' : 'text-gold-300'}
               />
             </div>
-            <h2 className="text-lg font-bold text-gray-900">{title}</h2>
+            <h2 className="text-lg font-bold text-white">{title}</h2>
           </div>
           
-          <p className="text-gray-600 mb-6">{message}</p>
+          <p className="text-gray-300 mb-6">{message}</p>
           
           <div className="flex gap-3 justify-end">
             <Button

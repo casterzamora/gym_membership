@@ -8,24 +8,24 @@ export default function Button({
   className = '',
   ...props 
 }) {
-  const baseStyles = 'font-bold rounded-lg transition-all duration-300 flex items-center justify-center gap-2'
+  const baseStyles = 'font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 border'
   
   const variants = {
-    primary: 'bg-gradient-to-r from-gold-bright to-gold-600 hover:from-gold-600 hover:to-gold-700 text-black shadow-lg hover:shadow-xl hover:shadow-gold-500/50',
-    secondary: 'bg-dark-card border border-gold-bright/30 text-gold-bright hover:border-gold-bright hover:shadow-lg hover:shadow-gold-bright/20',
-    danger: 'bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-red-500/50',
-    success: 'bg-accent-teal hover:bg-teal-600 text-black shadow-lg hover:shadow-teal-500/50',
+    primary: 'bg-gold-600 border-gold-500 text-black hover:bg-gold-500 hover:border-gold-400 shadow-md shadow-black/20',
+    secondary: 'bg-dark-card border-gold-600/30 text-gold-300 hover:border-gold-500/70 hover:bg-dark-secondary',
+    danger: 'bg-red-600 border-red-500 text-white hover:bg-red-700 hover:border-red-600 shadow-md shadow-black/20',
+    success: 'bg-accent-teal border-teal-400 text-black hover:bg-teal-500 hover:border-teal-300 shadow-md shadow-black/20',
   }
   
   const sizes = {
     sm: 'px-3 py-1.5 text-sm',
-    md: 'px-6 py-2.5 text-base',
-    lg: 'px-8 py-3 text-lg',
+    md: 'px-5 py-2.5 text-base',
+    lg: 'px-7 py-3 text-lg',
   }
 
   return (
     <motion.button
-      whileHover={{ scale: 1.02 }}
+      whileHover={{ y: -1 }}
       whileTap={{ scale: 0.98 }}
       disabled={isLoading}
       className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${isLoading ? 'opacity-75 cursor-not-allowed' : ''} ${className}`}

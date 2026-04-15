@@ -3,7 +3,7 @@ import { AuthContext } from '@/context/AuthContext';
 import { Card, StatCard, LoadingSpinner } from '@/components';
 import api from '@/services/api';
 import { BookOpen, Users, TrendingUp, Award } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const TrainerDashboard = () => {
   const { user } = useContext(AuthContext);
@@ -14,7 +14,8 @@ const TrainerDashboard = () => {
     avgAttendance: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [chartData, setChartData] = useState([]);
+  const [attendanceStatusData, setAttendanceStatusData] = useState([]);
+  const [summaryTrendData, setSummaryTrendData] = useState([]);
 
   useEffect(() => {
     if (user?.id) {
@@ -25,36 +26,42 @@ const TrainerDashboard = () => {
   const fetchStats = async () => {
     try {
       setLoading(true);
-      
-      const classesRes = await api.classesAPI.list().catch(() => ({ data: { data: [] } }));
-      const allClasses = classesRes.data.data || [];
-      const myClasses = allClasses.filter(c => c.trainer_id === user?.id);
 
-      const schedulesRes = await api.schedulesAPI.list().catch(() => ({ data: { data: [] } }));
-      const allSchedules = schedulesRes.data.data || [];
-      const mySchedules = allSchedules.filter(s => myClasses.some(c => c.id === s.class_id));
+      const trainersRes = await api.trainersAPI.list().catch(() => ({ data: { data: [] } }));
+      const trainers = trainersRes.data.data || [];
+      const currentTrainer = trainers.find(t => t.email?.toLowerCase() === user?.email?.toLowerCase());
 
-      const attendanceRes = await api.attendanceAPI.list().catch(() => ({ data: { data: [] } }));
-      const allAttendance = attendanceRes.data.data || [];
-      const myAttendance = allAttendance.filter(a => mySchedules.some(s => s.id === a.schedule_id));
+      if (!currentTrainer) {
+        setStats({ myClasses: 0, myStudents: 0, totalSessions: 0, avgAttendance: 0 });
+        setAttendanceStatusData([]);
+        setSummaryTrendData([]);
+        return;
+      }
 
-      const uniqueStudents = new Set(myAttendance.map(a => a.member_id));
-      const avgAttendance = mySchedules.length > 0 ? Math.round((myAttendance.length / mySchedules.length) * 100) : 0;
+      const workloadRes = await api.trainersAPI.workload(currentTrainer.id);
+      const workload = workloadRes.data?.data || {};
+      const metrics = workload.metrics || {};
+      const byStatus = workload.attendance_by_status || {};
 
       setStats({
-        myClasses: myClasses.length,
-        myStudents: uniqueStudents.size,
-        totalSessions: mySchedules.length,
-        avgAttendance: avgAttendance,
+        myClasses: metrics.total_classes || 0,
+        myStudents: metrics.unique_members || 0,
+        totalSessions: metrics.total_schedules || 0,
+        avgAttendance: metrics.average_attendance_per_schedule || 0,
       });
 
-      // Generate chart data
-      const weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
-      setChartData(weeks.map((week, i) => ({
-        name: week,
-        students: Math.floor(Math.random() * 20) + 5,
-        attendance: Math.floor(Math.random() * 40) + 60,
-      })));
+      setAttendanceStatusData([
+        { name: 'Present', value: byStatus.Present || 0 },
+        { name: 'Late', value: byStatus.Late || 0 },
+        { name: 'Absent', value: byStatus.Absent || 0 },
+      ]);
+
+      setSummaryTrendData([
+        { name: 'Classes', value: metrics.total_classes || 0 },
+        { name: 'Schedules', value: metrics.total_schedules || 0 },
+        { name: 'Upcoming', value: metrics.upcoming_schedules || 0 },
+        { name: 'Members', value: metrics.unique_members || 0 },
+      ]);
     } catch (err) {
       console.error('Failed to load stats', err);
     } finally {
@@ -95,8 +102,8 @@ const TrainerDashboard = () => {
           />
           <StatCard 
             icon={Award} 
-            label="Avg Attendance" 
-            value={`${stats.avgAttendance}%`} 
+            label="Avg Attendance / Session" 
+            value={Number(stats.avgAttendance).toFixed(2)} 
             color="orange"
           />
         </div>
@@ -106,9 +113,9 @@ const TrainerDashboard = () => {
           {/* Weekly Activity Chart */}
           <Card>
             <div className="p-6">
-              <h3 className="text-lg font-bold text-white mb-4">Weekly Activity</h3>
+              <h3 className="text-lg font-bold text-white mb-4">Attendance Status</h3>
               <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={chartData}>
+                <BarChart data={attendanceStatusData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
                   <XAxis dataKey="name" stroke="#9ca3af" />
                   <YAxis stroke="#9ca3af" />
@@ -117,9 +124,8 @@ const TrainerDashboard = () => {
                     labelStyle={{ color: '#fff' }}
                   />
                   <Legend />
-                  <Line type="monotone" dataKey="students" stroke="#60a5fa" strokeWidth={2} name="Students" />
-                  <Line type="monotone" dataKey="attendance" stroke="#10b981" strokeWidth={2} name="Attendance" />
-                </LineChart>
+                  <Bar dataKey="value" fill="#60a5fa" name="Records" radius={[6, 6, 0, 0]} />
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </Card>
@@ -127,27 +133,19 @@ const TrainerDashboard = () => {
           {/* Performance Metrics */}
           <Card>
             <div className="p-6">
-              <h3 className="text-lg font-bold text-white mb-6">Performance Metrics</h3>
-              <div className="space-y-5">
-                {[
-                  { label: 'Classes Managed', progress: 75, color: 'bg-blue-500' },
-                  { label: 'Student Engagement', progress: 60, color: 'bg-purple-500' },
-                  { label: 'Session Completion', progress: 85, color: 'bg-green-500' },
-                ].map((metric, i) => (
-                  <div key={i}>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-300">{metric.label}</span>
-                      <span className="text-sm font-bold text-gold-bright">{metric.progress}%</span>
-                    </div>
-                    <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full ${metric.color}`}
-                        style={{ width: `${metric.progress}%`, transition: 'width 0.5s ease' }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <h3 className="text-lg font-bold text-white mb-4">Workload Snapshot</h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={summaryTrendData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                  <XAxis dataKey="name" stroke="#9ca3af" />
+                  <YAxis stroke="#9ca3af" />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
+                    labelStyle={{ color: '#fff' }}
+                  />
+                  <Line type="monotone" dataKey="value" stroke="#10b981" strokeWidth={3} name="Total" />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           </Card>
         </div>

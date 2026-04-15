@@ -15,6 +15,10 @@ const MembersManagement = () => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
   const [memberToDelete, setMemberToDelete] = useState(null);
+  const [upgradeMember, setUpgradeMember] = useState(null);
+  const [upgradePlanId, setUpgradePlanId] = useState('');
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -162,6 +166,57 @@ const MembersManagement = () => {
     }
   };
 
+  const handleRenewMember = async (member) => {
+    try {
+      setActionLoading(true);
+      await api.membersAPI.renew(member.id);
+      toast.success(`Membership renewed for ${member.first_name} ${member.last_name}`);
+      fetchMembers();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to renew membership');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleOpenUpgradeModal = (member) => {
+    setUpgradeMember(member);
+    setUpgradePlanId('');
+    setIsUpgradeModalOpen(true);
+  };
+
+  const handleCloseUpgradeModal = () => {
+    setUpgradeMember(null);
+    setUpgradePlanId('');
+    setIsUpgradeModalOpen(false);
+  };
+
+  const handleUpgradeMember = async (e) => {
+    e.preventDefault();
+
+    if (!upgradeMember || !upgradePlanId) {
+      toast.error('Please select a new membership plan');
+      return;
+    }
+
+    if (String(upgradeMember.plan_id) === String(upgradePlanId)) {
+      toast.error('Selected plan is the same as current plan');
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      await api.membersAPI.upgrade(upgradeMember.id, { new_plan_id: Number(upgradePlanId) });
+      toast.success(`Membership upgraded for ${upgradeMember.first_name} ${upgradeMember.last_name}`);
+      handleCloseUpgradeModal();
+      fetchMembers();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to upgrade membership');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const columns = [
     { key: 'id', label: 'ID' },
     { key: 'first_name', label: 'First Name' },
@@ -176,6 +231,29 @@ const MembersManagement = () => {
       key: 'date_of_birth', 
       label: 'DOB',
       render: (value) => new Date(value).toLocaleDateString()
+    },
+    {
+      key: 'membership_actions',
+      label: 'Membership',
+      render: (_, row) => (
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => handleRenewMember(row)}
+            disabled={actionLoading}
+          >
+            Renew
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => handleOpenUpgradeModal(row)}
+            disabled={actionLoading}
+          >
+            Upgrade
+          </Button>
+        </div>
+      )
     },
   ];
 
@@ -302,6 +380,32 @@ const MembersManagement = () => {
         loading={loading}
         isDangerous
       />
+
+      {/* Upgrade Membership Modal */}
+      {upgradeMember && (
+        <FormModal
+          isOpen={isUpgradeModalOpen}
+          title={`Upgrade Membership: ${upgradeMember.first_name} ${upgradeMember.last_name}`}
+          onClose={handleCloseUpgradeModal}
+          onSubmit={handleUpgradeMember}
+          loading={actionLoading}
+          submitLabel="Upgrade"
+        >
+          <FormInput
+            label="Current Plan"
+            value={plans.find(p => p.id === upgradeMember.plan_id)?.plan_name || 'Unknown'}
+            disabled
+          />
+          <FormInput
+            label="New Membership Plan"
+            type="select"
+            value={upgradePlanId}
+            onChange={(e) => setUpgradePlanId(e.target.value)}
+            options={planOptions.filter(p => String(p.value) !== String(upgradeMember.plan_id))}
+            required
+          />
+        </FormModal>
+      )}
     </div>
   );
 };

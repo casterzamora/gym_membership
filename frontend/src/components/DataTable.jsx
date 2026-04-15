@@ -15,16 +15,17 @@ const DataTable = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const itemsPerPage = 10;
+  const safeData = Array.isArray(data) ? data : [];
 
   const filteredData = useMemo(() => {
-    if (!searchTerm || searchFields.length === 0) return data;
+    if (!searchTerm || searchFields.length === 0) return safeData;
     
-    return data.filter(item => 
+    return safeData.filter(item => 
       searchFields.some(field => 
         String(item[field]).toLowerCase().includes(searchTerm.toLowerCase())
       )
     );
-  }, [data, searchTerm, searchFields]);
+  }, [safeData, searchTerm, searchFields]);
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -34,20 +35,20 @@ const DataTable = ({
   const handleNextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
 
   if (loading) {
-    return <div className="text-center py-8 text-gray-500">Loading...</div>;
+    return <div className="text-center py-8 text-gray-400">Loading...</div>;
   }
 
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
+    <div className="bg-dark-card border border-gold-600/20 rounded-lg shadow-xl shadow-black/20 overflow-hidden">
       {/* Header */}
-      <div className="p-6 border-b border-gray-200">
+      <div className="p-6 border-b border-gray-800">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+          <h2 className="text-xl font-bold text-white">{title}</h2>
         </div>
         
         {searchFields.length > 0 && (
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" size={20} />
             <input
               type="text"
               placeholder={`Search ${searchFields.join(', ')}...`}
@@ -56,7 +57,7 @@ const DataTable = ({
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2.5 bg-dark-secondary border border-gray-700 text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-600/60 focus:border-gold-600/60"
             />
           </div>
         )}
@@ -65,17 +66,17 @@ const DataTable = ({
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="bg-black/25 border-b border-gray-800">
             <tr>
               {columns.map(col => (
                 <th 
                   key={col.key}
-                  className="px-6 py-3 text-left text-sm font-semibold text-gray-700"
+                  className="px-6 py-3 text-left text-sm font-semibold text-gray-300"
                 >
                   {col.label}
                 </th>
               ))}
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -87,9 +88,9 @@ const DataTable = ({
               </tr>
             ) : (
               paginatedData.map((item, idx) => (
-                <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50 transition">
+                <tr key={idx} className="border-b border-gray-800 hover:bg-black/20 transition">
                   {columns.map(col => (
-                    <td key={col.key} className="px-6 py-4 text-sm text-gray-900">
+                    <td key={col.key} className="px-6 py-4 text-sm text-gray-100">
                       {col.render ? col.render(item[col.key], item) : item[col.key]}
                     </td>
                   ))}
@@ -98,7 +99,7 @@ const DataTable = ({
                       {onView && (
                         <button
                           onClick={() => onView(item)}
-                          className="p-2 hover:bg-blue-100 rounded-lg text-blue-600 transition"
+                          className="p-2 hover:bg-blue-500/20 rounded-lg text-blue-300 transition"
                           title="View"
                         >
                           <Eye size={18} />
@@ -107,7 +108,7 @@ const DataTable = ({
                       {onEdit && (
                         <button
                           onClick={() => onEdit(item)}
-                          className="p-2 hover:bg-amber-100 rounded-lg text-amber-600 transition"
+                          className="p-2 hover:bg-amber-500/20 rounded-lg text-amber-300 transition"
                           title="Edit"
                         >
                           <Edit2 size={18} />
@@ -116,7 +117,7 @@ const DataTable = ({
                       {onDelete && (
                         <button
                           onClick={() => onDelete(item)}
-                          className="p-2 hover:bg-red-100 rounded-lg text-red-600 transition"
+                          className="p-2 hover:bg-red-500/20 rounded-lg text-red-300 transition"
                           title="Delete"
                         >
                           <Trash2 size={18} />
@@ -133,15 +134,15 @@ const DataTable = ({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="p-6 border-t border-gray-200 flex justify-between items-center">
-          <div className="text-sm text-gray-600">
+        <div className="p-6 border-t border-gray-800 flex justify-between items-center">
+          <div className="text-sm text-gray-400">
             Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredData.length)} of {filteredData.length} results
           </div>
           <div className="flex gap-2">
             <button
               onClick={handlePrevPage}
               disabled={currentPage === 1}
-              className="p-2 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-2 hover:bg-black/30 rounded-lg text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronLeft size={20} />
             </button>
@@ -152,8 +153,8 @@ const DataTable = ({
                   onClick={() => setCurrentPage(page)}
                   className={`px-3 py-1 rounded-lg text-sm transition ${
                     currentPage === page
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                      ? 'bg-gold-600 text-black'
+                      : 'bg-dark-secondary text-gray-200 hover:bg-black/30'
                   }`}
                 >
                   {page}
@@ -163,7 +164,7 @@ const DataTable = ({
             <button
               onClick={handleNextPage}
               disabled={currentPage === totalPages}
-              className="p-2 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-2 hover:bg-black/30 rounded-lg text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronRight size={20} />
             </button>
