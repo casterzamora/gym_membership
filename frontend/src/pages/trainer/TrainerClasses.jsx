@@ -25,32 +25,24 @@ const TrainerClasses = () => {
   const [currentTrainerId, setCurrentTrainerId] = useState(null);
 
   useEffect(() => {
-    if (user?.email) {
+    if (user?.trainer_id) {
+      setCurrentTrainerId(user.trainer_id);
       fetchClasses();
     }
-  }, [user?.email]);
-
-  const resolveTrainerId = async () => {
-    const trainersRes = await api.trainersAPI.list();
-    const all = trainersRes?.data?.data || [];
-    const trainer = all.find((t) => t.email?.toLowerCase() === user?.email?.toLowerCase());
-    return trainer?.id || null;
-  };
+  }, [user?.trainer_id]);
 
   const fetchClasses = async () => {
     try {
       setLoading(true);
-      const trainerId = await resolveTrainerId();
-      setCurrentTrainerId(trainerId);
-
-      if (!trainerId) {
-        setClasses([]);
-        return;
-      }
-
       const res = await api.classesAPI.list();
       const allClasses = res?.data?.data || [];
-      setClasses(allClasses.filter((c) => Number(c.trainer_id) === Number(trainerId)));
+      // If trainer, only show classes assigned to them. Admins see all classes.
+      if (user?.role === 'trainer' && currentTrainerId) {
+        const trainerClasses = allClasses.filter((c) => Number(c.trainer_id) === Number(currentTrainerId));
+        setClasses(trainerClasses);
+      } else {
+        setClasses(allClasses);
+      }
     } catch (err) {
       toast.error('Failed to load classes');
       setClasses([]);
@@ -159,25 +151,29 @@ const TrainerClasses = () => {
   return (
     <div className="pt-20 min-h-screen bg-dark-bg pb-12">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
+          <div className="flex justify-between items-center mb-8">
           <div>
             <div className="flex items-center gap-3 mb-2">
               <BookOpen size={32} className="text-gold-400" />
-              <h1 className="text-4xl font-bold text-white">My Classes</h1>
+              <h1 className="text-4xl font-bold text-white">Classes</h1>
             </div>
-            <p className="text-gray-400">Manage your assigned class catalog</p>
+            <p className="text-gray-400">View all classes and create your own</p>
           </div>
-          <Button onClick={openCreateModal} className="flex items-center gap-2">
-            <Plus size={18} />
-            New Class
-          </Button>
+          {user?.role === 'admin' ? (
+            <Button onClick={openCreateModal} className="flex items-center gap-2">
+              <Plus size={18} />
+              New Class
+            </Button>
+          ) : (
+            <div className="text-sm text-gray-400">Trainers may create schedules only; class management is admin-only.</div>
+          )}
         </div>
 
         {classes.length === 0 ? (
           <Card>
             <div className="p-12 text-center">
               <BookOpen size={48} className="text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400">No classes created yet. Create your first class.</p>
+              <p className="text-gray-400">No classes available yet. Create your first class.</p>
             </div>
           </Card>
         ) : (
@@ -202,23 +198,29 @@ const TrainerClasses = () => {
                       <td className="px-6 py-4 text-gray-400 text-sm max-w-xs truncate">{classItem.description || '-'}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => openEditModal(classItem)}
-                            className="p-2 text-blue-300 hover:bg-blue-500/20 rounded transition"
-                            title="Edit"
-                          >
-                            <Edit2 size={16} />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setClassToDelete(classItem);
-                              setIsConfirmOpen(true);
-                            }}
-                            className="p-2 text-red-300 hover:bg-red-500/20 rounded transition"
-                            title="Delete"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          {user?.role === 'admin' ? (
+                            <>
+                              <button
+                                onClick={() => openEditModal(classItem)}
+                                className="p-2 text-blue-300 hover:bg-blue-500/20 rounded transition"
+                                title="Edit"
+                              >
+                                <Edit2 size={16} />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setClassToDelete(classItem);
+                                  setIsConfirmOpen(true);
+                                }}
+                                className="p-2 text-red-300 hover:bg-red-500/20 rounded transition"
+                                title="Delete"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </>
+                          ) : (
+                            <div className="text-sm text-gray-400">Schedule management only</div>
+                          )}
                         </div>
                       </td>
                     </tr>

@@ -60,8 +60,8 @@ class DatabaseSeeder extends Seeder
         $plans = [];
         $planData = [
             ['name' => 'Bronze', 'price' => 750, 'duration' => 1, 'classes' => 4, 'description' => 'Perfect for beginners'],
-            ['name' => 'Silver', 'price' => 1000, 'duration' => 1, 'classes' => 8, 'description' => 'For regular gym-goers'],
-            ['name' => 'Gold', 'price' => 1500, 'duration' => 1, 'classes' => 999, 'description' => 'Premium membership'],
+            ['name' => 'Silver', 'price' => 1000, 'duration' => 2, 'classes' => 8, 'description' => 'For regular gym-goers'],
+            ['name' => 'Gold', 'price' => 1500, 'duration' => 3, 'classes' => 999, 'description' => 'Premium membership'],
         ];
         foreach ($planData as $data) {
             $plans[] = MembershipPlan::create([
@@ -112,7 +112,14 @@ class DatabaseSeeder extends Seeder
                 'max_participants' => 20,
                 'difficulty_level' => ['Beginner', 'Intermediate', 'Advanced'][$i % 3],
                 'trainer_id' => $trainers[$i % 5]->id,
+                'is_special' => false,
             ]);
+        }
+
+        // Allow all membership plans to access all seeded classes by default.
+        $planIds = $plans->pluck('id')->all();
+        foreach ($classes as $class) {
+            $class->membershipPlans()->sync($planIds);
         }
 
         // Create 8 pieces of equipment

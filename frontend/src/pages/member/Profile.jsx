@@ -34,7 +34,9 @@ export default function Profile() {
   const fetchProfileData = async () => {
     try {
       setLoading(true)
-      const response = await membersAPI.get(user.id)
+      // Fetch member data - use member_id from auth payload if available, otherwise use user.id
+      const memberId = user.member_id || user.id
+      const response = await membersAPI.get(memberId)
       const member = response.data.data
       setMemberData(member)
       setFormData({
@@ -121,16 +123,7 @@ export default function Profile() {
   const handleRenewMembership = async () => {
     if (!memberData?.id) return
 
-    try {
-      setRenewing(true)
-      await membersAPI.renew(memberData.id)
-      toast.success('Membership renewed successfully')
-      fetchProfileData()
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to renew membership')
-    } finally {
-      setRenewing(false)
-    }
+    navigate(`/checkout?flow=renew&member_id=${memberData.id}`)
   }
 
   const handleUpgradeMembership = async () => {
@@ -139,17 +132,44 @@ export default function Profile() {
       return
     }
 
-    try {
-      setUpgrading(true)
-      await membersAPI.upgrade(memberData.id, { new_plan_id: Number(upgradePlanId) })
-      toast.success('Membership upgraded successfully')
-      setUpgradePlanId('')
-      fetchProfileData()
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to upgrade membership')
-    } finally {
-      setUpgrading(false)
-    }
+    navigate(`/checkout?flow=upgrade&member_id=${memberData.id}&plan_id=${upgradePlanId}`)
+  }
+
+  const getMembershipExpiryDate = () => {
+    const rawExpiry = memberData?.membership?.end_date || memberData?.membership_end || memberData?.membership_end_date
+    if (!rawExpiry) return null
+
+    const expiryDate = new Date(rawExpiry)
+    if (Number.isNaN(expiryDate.getTime())) return null
+
+    return expiryDate
+  }
+
+  const getDaysLeft = () => {
+    const expiryDate = getMembershipExpiryDate()
+    if (!expiryDate) return null
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const normalizedExpiry = new Date(expiryDate)
+    normalizedExpiry.setHours(0, 0, 0, 0)
+
+    return Math.ceil((normalizedExpiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  }
+
+  const canUpgradeNow = () => {
+    const expiryDate = getMembershipExpiryDate()
+    if (!expiryDate) return false
+
+    return new Date() >= expiryDate
+  }
+
+  const canRenewNow = () => {
+    const expiryDate = getMembershipExpiryDate()
+    if (!expiryDate) return false
+
+    return new Date() >= expiryDate
   }
 
   if (authLoading || loading) {
@@ -200,6 +220,24 @@ export default function Profile() {
                 <div className="text-gold-400 text-sm font-bold mb-1">MEMBER SINCE</div>
                 <div className="text-white">
                   {memberData?.created_at ? new Date(memberData.created_at).toLocaleDateString() : 'N/A'}
+                </div>
+              </div>
+              <div>
+                <div className="text-gold-400 text-sm font-bold mb-1">EXPIRATION DATE</div>
+                <div className="text-white">
+                  {getMembershipExpiryDate() ? getMembershipExpiryDate().toLocaleDateString() : 'N/A'}
+                </div>
+              </div>
+              <div>
+                <div className="text-gold-400 text-sm font-bold mb-1">DAYS LEFT</div>
+                <div className="text-white">
+                  {getDaysLeft() === null
+                    ? 'N/A'
+                    : getDaysLeft() > 0
+                      ? `${getDaysLeft()} day${getDaysLeft() === 1 ? '' : 's'} left`
+                      : getDaysLeft() === 0
+                        ? 'Expires today'
+                        : `Expired ${Math.abs(getDaysLeft())} day${Math.abs(getDaysLeft()) === 1 ? '' : 's'} ago`}
                 </div>
               </div>
               <div>
@@ -377,6 +415,18 @@ export default function Profile() {
                   {renewing ? 'Renewing...' : 'Renew Current Plan'}
                 </button>
               </div>
+
+              <div className="mt-4 p-4 rounded-lg border border-amber-400/30 bg-amber-500/10 flex gap-3">
+                <AlertCircle size={18} className="text-amber-300 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-amber-100">
+                  <p className="font-semibold">Renewal notice</p>
+                  <p>
+                    {canRenewNow()
+                      ? 'Your membership is eligible for renewal now.'
+                      : 'You can only renew once your current membership expires.'}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -418,6 +468,18 @@ export default function Profile() {
                   {upgrading ? 'Upgrading...' : 'Upgrade Membership'}
                 </button>
                 {!upgradePlanId && <span className="text-sm text-gray-400">Select a plan first</span>}
+              </div>
+
+              <div className="mt-4 p-4 rounded-lg border border-amber-400/30 bg-amber-500/10 flex gap-3">
+                <AlertCircle size={18} className="text-amber-300 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-amber-100">
+                  <p className="font-semibold">Upgrade notice</p>
+                  <p>
+                    {canUpgradeNow()
+                      ? 'Your membership is eligible for upgrade now.'
+                      : 'You can only upgrade once your current membership expires.'}
+                  </p>
+                </div>
               </div>
             </div>
           )}

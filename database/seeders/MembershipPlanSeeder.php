@@ -13,15 +13,15 @@ class MembershipPlanSeeder extends Seeder
      */
     public function run(): void
     {
-        MembershipPlan::create([
-            'plan_name' => 'Basic Plan',
-            'description' => 'Perfect for beginners',
-            'price' => 29.99,
-            'duration_days' => 30,
-            'max_classes_per_week' => 5,
-            'max_personal_training_sessions' => 2,
-            'benefits' => json_encode(['Gym Access', 'Basic Equipment', 'Email Support']),
-            'status' => 'active'
-        ]);
+        foreach ([
+            ['plan_name' => 'Bronze', 'price' => 750, 'duration_months' => 1, 'max_classes_per_week' => 4, 'description' => 'Perfect for beginners'],
+            ['plan_name' => 'Silver', 'price' => 1000, 'duration_months' => 2, 'max_classes_per_week' => 8, 'description' => 'For regular gym-goers'],
+            ['plan_name' => 'Gold', 'price' => 1500, 'duration_months' => 3, 'max_classes_per_week' => 999, 'description' => 'Premium membership'],
+        ] as $plan) {
+            MembershipPlan::updateOrCreate(
+                ['plan_name' => $plan['plan_name']],
+                $plan
+            );
+        }
     }
 }

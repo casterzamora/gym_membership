@@ -1,0 +1,16 @@
+[
+    {
+        "id": 1,
+        "name": "Admin User",
+        "email": "admin@gym.com",
+        "email_verified_at": null,
+        "password": "$2y$12$0Wr.UH4m4cYPI8xarE9j1.VoTKow7hQAd06OVPAhtUXTGm7IgbQZC",
+        "role": "admin",
+        "remember_token": null,
+        "created_at": "2026-04-06 09:42:01",
+        "updated_at": "2026-04-06 09:42:01",
+        "email_verification_token": null,
+        "password_reset_token": null,
+        "password_reset_expires_at": null
+    }
+]

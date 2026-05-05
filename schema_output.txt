@@ -1,0 +1,241 @@
+DATABASE SCHEMA ANALYSIS
+====================================================================================================
+
+attendance (0 records, 7 columns)
+----------------------------------------------------------------------------------------------------
+  member_id: bigint(20) unsigned [PK] NOT NULL
+  schedule_id: bigint(20) unsigned [PK] NOT NULL
+  attendance_status: enum('Present','Absent','Late') NOT NULL
+  attendance_notes: text NULL
+  recorded_at: timestamp NOT NULL
+  created_at: timestamp NULL
+  updated_at: timestamp NULL
+  Foreign Keys:
+    member_id -> members.id
+    schedule_id -> class_schedules.id
+
+certifications (6 records, 8 columns)
+----------------------------------------------------------------------------------------------------
+  id: bigint(20) unsigned [PK] NOT NULL
+  cert_name: varchar(255) NOT NULL
+  issuing_organization: varchar(255) NOT NULL
+  cert_number: varchar(255) NULL
+  issue_date: date NULL
+  expiry_date: date NULL
+  created_at: timestamp NULL
+  updated_at: timestamp NULL
+
+class_schedules (0 records, 9 columns)
+----------------------------------------------------------------------------------------------------
+  id: bigint(20) unsigned [PK] NOT NULL
+  class_id: bigint(20) unsigned NOT NULL
+  class_date: date NOT NULL
+  start_time: time NOT NULL
+  end_time: time NOT NULL
+  recurrence_type: varchar(255) NULL
+  recurrence_end_date: date NULL
+  created_at: timestamp NULL
+  updated_at: timestamp NULL
+  Foreign Keys:
+    class_id -> fitness_classes.id
+
+equipment (7 records, 7 columns)
+----------------------------------------------------------------------------------------------------
+  id: bigint(20) unsigned [PK] NOT NULL
+  equipment_name: varchar(255) NOT NULL
+  status: enum('Available','Maintenance','Out of Service') NOT NULL
+  acquisition_date: date NULL
+  last_maintenance: date NULL
+  created_at: timestamp NULL
+  updated_at: timestamp NULL
+
+equipment_tracking (0 records, 13 columns)
+----------------------------------------------------------------------------------------------------
+  id: bigint(20) unsigned [PK] NOT NULL
+  class_id: bigint(20) unsigned NOT NULL
+  equipment_id: bigint(20) unsigned NOT NULL
+  user_id: bigint(20) unsigned NULL
+  quantity: int(11) NOT NULL
+  status: enum('required','in_use','returned') NOT NULL
+  used_at: timestamp NULL
+  returned_at: timestamp NULL
+  assigned_by: bigint(20) unsigned NULL
+  returned_by: bigint(20) unsigned NULL
+  notes: text NULL
+  created_at: timestamp NULL
+  updated_at: timestamp NULL
+  Foreign Keys:
+    assigned_by -> users.id
+    class_id -> fitness_classes.id
+    equipment_id -> equipment.id
+    returned_by -> users.id
+    user_id -> users.id
+
+fitness_classes (1 records, 8 columns)
+----------------------------------------------------------------------------------------------------
+  id: bigint(20) unsigned [PK] NOT NULL
+  class_name: varchar(255) NOT NULL
+  description: text NULL
+  trainer_id: bigint(20) unsigned NOT NULL
+  max_participants: int(11) NOT NULL
+  difficulty_level: varchar(255) NOT NULL
+  created_at: timestamp NULL
+  updated_at: timestamp NULL
+  Foreign Keys:
+    trainer_id -> trainers.id
+
+members (22 records, 17 columns)
+----------------------------------------------------------------------------------------------------
+  id: bigint(20) unsigned [PK] NOT NULL
+  first_name: varchar(255) NOT NULL
+  last_name: varchar(255) NOT NULL
+  email: varchar(255) NOT NULL
+  username: varchar(255) NOT NULL
+  password_hash: varchar(255) NOT NULL
+  phone: varchar(255) NOT NULL
+  fitness_goal: varchar(255) NULL
+  health_notes: text NULL
+  registration_type: varchar(255) NOT NULL
+  date_of_birth: date NOT NULL
+  plan_id: bigint(20) unsigned NULL
+  membership_start: date NULL
+  membership_end: date NULL
+  membership_status: varchar(255) NOT NULL
+  created_at: timestamp NULL
+  updated_at: timestamp NULL
+  Foreign Keys:
+    plan_id -> membership_plans.id
+
+membership_plans (3 records, 8 columns)
+----------------------------------------------------------------------------------------------------
+  id: bigint(20) unsigned [PK] NOT NULL
+  plan_name: varchar(255) NOT NULL
+  price: decimal(10,2) NOT NULL
+  duration_months: int(11) NOT NULL
+  max_classes_per_week: int(11) NOT NULL
+  description: text NULL
+  created_at: timestamp NULL
+  updated_at: timestamp NULL
+
+membership_upgrades (3 records, 7 columns)
+----------------------------------------------------------------------------------------------------
+  id: bigint(20) unsigned [PK] NOT NULL
+  member_id: bigint(20) unsigned NOT NULL
+  old_plan_id: bigint(20) unsigned NULL
+  new_plan_id: bigint(20) unsigned NOT NULL
+  upgrade_date: date NOT NULL
+  created_at: timestamp NULL
+  updated_at: timestamp NULL
+  Foreign Keys:
+    member_id -> members.id
+    new_plan_id -> membership_plans.id
+    old_plan_id -> membership_plans.id
+
+payments (18 records, 22 columns)
+----------------------------------------------------------------------------------------------------
+  id: bigint(20) unsigned [PK] NOT NULL
+  id: bigint(20) unsigned [PK] NOT NULL
+  member_id: bigint(20) unsigned NOT NULL
+  amount: decimal(10,2) unsigned NOT NULL
+  amount_paid: decimal(10,2) NOT NULL
+  currency: varchar(3) NOT NULL
+  payment_date: date NOT NULL
+  status: enum('pending','successful','failed','refunded') NOT NULL
+  payment_method_id: bigint(20) unsigned NULL
+  payment_method: varchar(50) NOT NULL
+  coverage_start: date NOT NULL
+  gateway: varchar(50) NULL
+  coverage_end: date NOT NULL
+  transaction_id: varchar(255) NULL
+  created_at: timestamp NULL
+  gateway_response: text NULL
+  updated_at: timestamp NULL
+  processed_at: datetime NULL
+  original_payment_id: bigint(20) unsigned NULL
+  booking_id: bigint(20) unsigned NOT NULL
+  created_at: timestamp NULL
+  updated_at: timestamp NULL
+  Foreign Keys:
+    booking_id -> bookings.id
+    member_id -> members.id
+    original_payment_id -> payments.id
+    payment_method_id -> payment_methods.payment_method_id
+
+payment_methods (6 records, 4 columns)
+----------------------------------------------------------------------------------------------------
+  payment_method_id: bigint(20) unsigned [PK] NOT NULL
+  method_name: varchar(255) NOT NULL
+  created_at: timestamp NULL
+  updated_at: timestamp NULL
+
+sessions (0 records, 12 columns)
+----------------------------------------------------------------------------------------------------
+  id: varchar(255) [PK] NOT NULL
+  id: varchar(255) [PK] NOT NULL
+  user_id: bigint(20) unsigned NULL
+  user_id: bigint(20) unsigned NULL
+  ip_address: varchar(45) NULL
+  ip_address: varchar(45) NULL
+  user_agent: text NULL
+  user_agent: text NULL
+  payload: longtext NOT NULL
+  payload: longtext NOT NULL
+  last_activity: int(11) NOT NULL
+  last_activity: int(11) NOT NULL
+
+trainers (7 records, 9 columns)
+----------------------------------------------------------------------------------------------------
+  id: bigint(20) unsigned [PK] NOT NULL
+  first_name: varchar(255) NOT NULL
+  last_name: varchar(255) NOT NULL
+  email: varchar(255) NOT NULL
+  specialization: varchar(255) NOT NULL
+  phone: varchar(255) NOT NULL
+  hourly_rate: decimal(8,2) NOT NULL
+  created_at: timestamp NULL
+  updated_at: timestamp NULL
+
+trainer_certifications (1 records, 6 columns)
+----------------------------------------------------------------------------------------------------
+  trainer_id: bigint(20) unsigned [PK] NOT NULL
+  certification_id: bigint(20) unsigned [PK] NOT NULL
+  date_obtained: date NULL
+  expires_at: date NULL
+  created_at: timestamp NULL
+  updated_at: timestamp NULL
+  Foreign Keys:
+    certification_id -> certifications.id
+    trainer_id -> trainers.id
+
+users (1 records, 29 columns)
+----------------------------------------------------------------------------------------------------
+  id: bigint(20) unsigned [PK] NOT NULL
+  USER: char(128) NULL
+  id: bigint(20) unsigned [PK] NOT NULL
+  name: varchar(255) NOT NULL
+  CURRENT_CONNECTIONS: bigint(20) NOT NULL
+  name: varchar(255) NOT NULL
+  email: varchar(255) NOT NULL
+  TOTAL_CONNECTIONS: bigint(20) NOT NULL
+  email: varchar(255) NOT NULL
+  email_verified_at: timestamp NULL
+  email_verified_at: timestamp NULL
+  password: varchar(255) NOT NULL
+  password: varchar(255) NOT NULL
+  role: enum('admin','trainer','member') NOT NULL
+  remember_token: varchar(100) NULL
+  remember_token: varchar(100) NULL
+  created_at: timestamp NULL
+  created_at: timestamp NULL
+  updated_at: timestamp NULL
+  updated_at: timestamp NULL
+  first_name: varchar(100) NULL
+  email_verification_token: varchar(255) NULL
+  last_name: varchar(100) NULL
+  password_reset_token: varchar(255) NULL
+  phone: varchar(20) NULL
+  password_reset_expires_at: timestamp NULL
+  is_active: tinyint(1) NOT NULL
+  last_login_at: timestamp NULL
+  deleted_at: timestamp NULL
+

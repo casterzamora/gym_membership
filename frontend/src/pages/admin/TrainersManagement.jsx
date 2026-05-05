@@ -19,6 +19,7 @@ const TrainersManagement = () => {
     specialization: '',
     phone: '',
     hourly_rate: '',
+    password: '',
   });
   const [errors, setErrors] = useState({});
 
@@ -61,6 +62,7 @@ const TrainersManagement = () => {
         specialization: '',
         phone: '',
         hourly_rate: '',
+        password: '',
       });
     }
     setErrors({});
@@ -77,6 +79,7 @@ const TrainersManagement = () => {
       specialization: '',
       phone: '',
       hourly_rate: '',
+      password: '',
     });
     setErrors({});
   };
@@ -91,6 +94,12 @@ const TrainersManagement = () => {
     if (!formData.phone.trim()) newErrors.phone = 'Phone is required';
     if (!formData.hourly_rate || formData.hourly_rate <= 0) newErrors.hourly_rate = 'Valid hourly rate is required';
     
+    // Password only required on create (not edit)
+    if (!editingTrainer) {
+      if (!formData.password) newErrors.password = 'Password is required';
+      if (formData.password && formData.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -101,6 +110,7 @@ const TrainersManagement = () => {
 
     try {
       setLoading(true);
+      console.log('Submitting trainer data:', formData);
       if (editingTrainer) {
         console.log('Updating trainer:', editingTrainer.id);
         await api.trainersAPI.update(editingTrainer.id, formData);
@@ -114,7 +124,20 @@ const TrainersManagement = () => {
       fetchTrainers();
     } catch (err) {
       console.error('Submit error:', err);
-      const errorMessage = err.response?.data?.message || err.message || 'Operation failed';
+      console.error('Error response:', err.response?.data);
+      console.error('Validation errors:', err.response?.data?.errors);
+      
+      let errorMessage = err.response?.data?.message || err.message || 'Operation failed';
+      
+      // If there are validation errors, show them
+      if (err.response?.data?.errors) {
+        const validationErrors = Object.entries(err.response.data.errors)
+          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+          .join('\n');
+        errorMessage = `Validation Error:\n${validationErrors}`;
+        setErrors(err.response.data.errors);
+      }
+      
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -236,6 +259,17 @@ const TrainersManagement = () => {
           placeholder="e.g., 50"
           required
         />
+        {!editingTrainer && (
+          <FormInput
+            label="Password"
+            type="password"
+            value={formData.password}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            error={errors.password}
+            placeholder="Minimum 8 characters"
+            required
+          />
+        )}
       </FormModal>
 
       <ConfirmDialog

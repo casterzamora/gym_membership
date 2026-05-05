@@ -16,14 +16,33 @@ class Equipment extends Model
         'last_maintenance' => 'date',
     ];
 
-    public function classes(): BelongsToMany
+public function classes(): BelongsToMany
     {
         return $this->belongsToMany(FitnessClass::class, 'class_equipment', 'equipment_id', 'class_id')
             ->withTimestamps();
     }
 
-    public function usage(): HasMany
+    /**
+     * Get all equipment tracking records for this equipment
+     */
+    public function tracking(): HasMany
     {
-        return $this->hasMany(EquipmentUsage::class);
+        return $this->hasMany(EquipmentTracking::class);
+    }
+
+    /**
+     * Get required equipment (those assigned to classes)
+     */
+    public function requiredTracking(): HasMany
+    {
+        return $this->tracking()->required();
+    }
+
+    /**
+     * Get equipment currently in use
+     */
+    public function inUseTracking(): HasMany
+    {
+        return $this->tracking()->inUse();
     }
 }

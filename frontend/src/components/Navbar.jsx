@@ -38,8 +38,10 @@ export default function Navbar() {
                 <>
                   <Link to="/trainer/dashboard" className="text-gray-100 hover:text-gold-300 transition">Dashboard</Link>
                   <Link to="/trainer/classes" className="text-gray-100 hover:text-gold-300 transition">My Classes</Link>
+                  <Link to="/trainer/attendance" className="text-gray-100 hover:text-gold-300 transition">Attendance</Link>
                   <Link to="/trainer/schedules" className="text-gray-100 hover:text-gold-300 transition">Schedules</Link>
                   <Link to="/trainer/members" className="text-gray-100 hover:text-gold-300 transition">My Students</Link>
+                  <Link to="/trainer/profile" className="text-gray-100 hover:text-gold-300 transition">Profile</Link>
                 </>
               )}
               <div className="text-sm text-gray-400 border-l border-gray-700 pl-4">{user.displayName || user.name}</div>

@@ -18,7 +18,7 @@ class StoreAttendanceRequest extends FormRequest
             'schedule_id' => 'required|exists:class_schedules,id',
             'attendance_status' => 'required|string|in:Present,Absent,Late',
             'attendance_notes' => 'nullable|string|max:500',
-            'recorded_at' => 'nullable|datetime',
+            'recorded_at' => 'nullable|date',
         ];
     }
 }

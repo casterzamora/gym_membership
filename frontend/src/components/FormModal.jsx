@@ -10,7 +10,8 @@ const FormModal = ({
   children, 
   loading = false,
   submitLabel = 'Save',
-  cancelLabel = 'Cancel'
+  cancelLabel = 'Cancel',
+  isValid = true
 }) => {
   if (!isOpen) return null;
 
@@ -47,7 +48,8 @@ const FormModal = ({
             </Button>
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || !isValid}
+              title={!isValid ? 'Please fill in all required fields' : 'Submit form'}
             >
               {loading ? 'Saving...' : submitLabel}
             </Button>

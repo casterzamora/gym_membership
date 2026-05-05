@@ -239,6 +239,7 @@ export default function Login() {
                   </label>
                   <button 
                     type="button"
+                    onClick={() => navigate('/forgot-password')}
                     className="text-gold-bright hover:text-gold-400 font-semibold transition-colors"
                     disabled={loading}
                   >

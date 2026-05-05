@@ -1,6 +1,5 @@
-import { useState, useContext, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { AuthContext } from '@/context/AuthContext'
 import { authAPI, plansAPI } from '@/services/api'
 import { motion } from 'framer-motion'
 import { AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react'
@@ -23,7 +22,6 @@ export default function Register() {
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
   const [plansLoading, setPlansLoading] = useState(true)
-  const { login } = useContext(AuthContext)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -97,19 +95,17 @@ export default function Register() {
       console.log('Registration response:', registerResponse)
 
       if (registerResponse.data.success) {
-        setSuccess('Account created successfully! Redirecting...')
-        toast.success('Welcome to Elevate Gym!')
-        const member = registerResponse.data.data.member || registerResponse.data.data.user
-        const token = registerResponse.data.data.token
-        
-        console.log(`Registration succeeded for ${member.email}`)
-        
-        // Call login to update AuthContext
-        login(member, token)
-        
-        // Redirect to dashboard
+        const checkoutToken = registerResponse.data.data?.checkout_token
+
+        if (!checkoutToken) {
+          throw new Error('Missing checkout token from registration response')
+        }
+
+        setSuccess('Signup successful. Redirecting to checkout...')
+        toast.success('Please complete payment to activate your account')
+
         setTimeout(() => {
-          navigate('/dashboard')
+          navigate(`/checkout?token=${encodeURIComponent(checkoutToken)}`)
         }, 500)
       } else {
         throw new Error(registerResponse.data.message || 'Registration failed')
@@ -184,6 +180,15 @@ export default function Register() {
             </h1>
             <p className="text-gray-400">Start your fitness journey today</p>
           </motion.div>
+
+            {/* Email Verification Info */}
+            <motion.div variants={itemVariants}>
+              <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                <p className="text-sm text-blue-300">
+                  ✉️ A confirmation email will be sent to your email address after signup. Please verify your email to proceed.
+                </p>
+              </div>
+            </motion.div>
 
           {/* Error Message */}
           {error && (
@@ -369,7 +374,7 @@ export default function Register() {
                 {/* Membership Plan */}
                 <div>
                   <label htmlFor="plan" className="block text-sm font-bold text-gold-500 mb-2">
-                    Membership Plan (optional)
+                    Membership Plan <span className="text-red-400">*</span>
                   </label>
                   {plansLoading ? (
                     <div className="w-full px-4 py-3 bg-dark-secondary border border-gold-bright/20 rounded-lg text-gray-400">
@@ -402,7 +407,7 @@ export default function Register() {
                   disabled={loading || plansLoading || plans.length === 0}
                   className="w-full px-4 py-3 bg-gradient-to-r from-gold-600 to-gold-500 text-black font-bold rounded-lg hover:from-gold-500 hover:to-gold-400 transition disabled:opacity-50 disabled:cursor-not-allowed mt-6"
                 >
-                  {loading ? 'Creating Account...' : 'Create Account'}
+                  {loading ? 'Creating Account...' : 'Continue to Checkout'}
                 </button>
               </form>
             </div>

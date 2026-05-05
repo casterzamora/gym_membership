@@ -16,8 +16,9 @@ class Member extends Model
     protected $primaryKey = 'id';
 
     protected $fillable = [
-        'first_name', 'last_name', 'email', 'phone', 'date_of_birth',
-        'username', 'password_hash', 'fitness_goal', 'health_notes',
+        'user_id',
+        'first_name', 'last_name', 'phone', 'date_of_birth',
+        'fitness_goal', 'health_notes',
         'registration_type', 'plan_id', 'membership_start', 'membership_end',
         'membership_status'
     ];
@@ -29,6 +30,14 @@ class Member extends Model
     ];
 
     protected $hidden = ['password_hash'];
+
+    /**
+     * Get the user associated with this member
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 
     public function plan(): BelongsTo
     {

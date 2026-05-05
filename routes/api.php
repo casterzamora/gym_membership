@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\EquipmentController;
+use App\Http\Controllers\Api\EquipmentTrackingController;
 use App\Http\Controllers\Api\MembershipPlanController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\HealthCheckController;
@@ -20,6 +21,12 @@ Route::get('health', [HealthCheckController::class, 'check']);
 // Public Auth Routes
 Route::post('register', [AuthController::class, 'register']);
 Route::post('login', [AuthController::class, 'login']);
+Route::post('checkout/session', [AuthController::class, 'checkoutSession']);
+Route::post('checkout/complete', [AuthController::class, 'completeCheckout']);
+Route::post('verify-email', [AuthController::class, 'verifyEmail']);
+Route::post('resend-verification-email', [AuthController::class, 'resendVerificationEmail']);
+Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('reset-password', [AuthController::class, 'resetPassword']);
 
 // Public Read-Only Routes (for browsing)
 Route::get('v1/plans', [MembershipPlanController::class, 'index']);
@@ -43,7 +50,9 @@ Route::prefix('v1')->group(function () {
 
         // Members
         Route::get('members', [MemberController::class, 'index'])->middleware('role:admin,trainer');
-        Route::post('members', [MemberController::class, 'store'])->middleware('role:admin');
+        // Search members / users for trainers to add as students
+        Route::get('members/search', [MemberController::class, 'search'])->middleware('role:admin,trainer');
+        Route::post('members', [MemberController::class, 'store'])->middleware('role:admin,trainer');
         Route::get('members/{member}', [MemberController::class, 'show'])
             ->middleware(['role:admin,trainer,member', 'member.self']);
         Route::put('members/{member}', [MemberController::class, 'update'])
@@ -58,16 +67,23 @@ Route::prefix('v1')->group(function () {
 
         // Trainers
         Route::get('trainers/workload-summary', [TrainerController::class, 'workloadSummary'])->middleware('role:admin');
-        Route::get('trainers/{trainer}/workload', [TrainerController::class, 'workload'])->middleware('role:admin,trainer');
-        Route::apiResource('trainers', TrainerController::class)->middleware('role:admin')->except(['index', 'show']);
+        Route::get('trainers/{trainer}/workload', [TrainerController::class, 'workload'])->middleware(['role:admin,trainer', 'trainer.self']);
+        Route::get('trainers', [TrainerController::class, 'index'])->middleware('role:admin');
+        Route::post('trainers', [TrainerController::class, 'store'])->middleware('role:admin');
+        Route::get('trainers/{trainer}', [TrainerController::class, 'show'])->middleware(['role:admin,trainer', 'trainer.self']);
+        Route::put('trainers/{trainer}', [TrainerController::class, 'update'])->middleware(['role:admin,trainer', 'trainer.self']);
+        Route::patch('trainers/{trainer}', [TrainerController::class, 'update'])->middleware(['role:admin,trainer', 'trainer.self']);
+        Route::post('trainers/{trainer}/certifications', [TrainerController::class, 'update'])->middleware(['role:admin,trainer', 'trainer.self']);
+        Route::delete('trainers/{trainer}/certifications/{cert}', [TrainerController::class, 'destroyCertification'])->middleware(['role:admin,trainer', 'trainer.self']);
+        Route::delete('trainers/{trainer}', [TrainerController::class, 'destroy'])->middleware('role:admin');
 
         // Fitness Classes (protected write operations)
         Route::get('classes', [FitnessClassController::class, 'index']);
-        Route::post('classes', [FitnessClassController::class, 'store'])->middleware('role:admin,trainer');
+        Route::post('classes', [FitnessClassController::class, 'store'])->middleware('role:admin');
         Route::get('classes/{fitnessClass}', [FitnessClassController::class, 'show']);
-        Route::put('classes/{fitnessClass}', [FitnessClassController::class, 'update'])->middleware('role:admin,trainer');
-        Route::patch('classes/{fitnessClass}', [FitnessClassController::class, 'update'])->middleware('role:admin,trainer');
-        Route::delete('classes/{fitnessClass}', [FitnessClassController::class, 'destroy'])->middleware('role:admin,trainer');
+        Route::put('classes/{fitnessClass}', [FitnessClassController::class, 'update'])->middleware('role:admin');
+        Route::patch('classes/{fitnessClass}', [FitnessClassController::class, 'update'])->middleware('role:admin');
+        Route::delete('classes/{fitnessClass}', [FitnessClassController::class, 'destroy'])->middleware('role:admin');
 
         // Class Schedules (protected write operations)
         Route::post('schedules', [ClassScheduleController::class, 'store'])->middleware('role:admin,trainer');
@@ -78,6 +94,8 @@ Route::prefix('v1')->group(function () {
         // Attendance
         Route::get('attendance', [AttendanceController::class, 'index'])->middleware('role:admin,trainer,member');
         Route::post('attendance', [AttendanceController::class, 'store'])->middleware('role:admin,trainer,member');
+        Route::put('attendance', [AttendanceController::class, 'upsert'])->middleware('role:admin,trainer,member');
+        Route::delete('attendance/unenroll/{member}', [AttendanceController::class, 'unenrollMember'])->middleware('role:admin,trainer');
         Route::get('attendance/{member_id}/{schedule_id}', [AttendanceController::class, 'show'])->middleware('role:admin,trainer,member');
         Route::put('attendance/{member_id}/{schedule_id}', [AttendanceController::class, 'update'])->middleware('role:admin,trainer,member');
         Route::patch('attendance/{member_id}/{schedule_id}', [AttendanceController::class, 'update'])->middleware('role:admin,trainer,member');
@@ -93,12 +111,16 @@ Route::prefix('v1')->group(function () {
         Route::patch('payments/{payment}', [PaymentController::class, 'update'])->middleware('role:admin');
         Route::delete('payments/{payment}', [PaymentController::class, 'destroy'])->middleware('role:admin');
 
-        // Payment Methods
-        Route::get('payment-methods', [PaymentMethodController::class, 'index']);
-        Route::get('payment-methods/{paymentMethod}', [PaymentMethodController::class, 'show']);
-
         // Equipment
-        Route::apiResource('equipment', EquipmentController::class)->middleware('role:admin')->except(['index', 'show']);
+        Route::get('equipment', [EquipmentController::class, 'index']);
+        Route::get('equipment/{equipment}', [EquipmentController::class, 'show']);
+        Route::apiResource('equipment', EquipmentController::class)->middleware('role:admin')->only(['store', 'update', 'destroy']);
+
+        // Equipment Tracking (assignment and usage tracking)
+        Route::apiResource('equipment-tracking', EquipmentTrackingController::class)->middleware('role:admin,trainer');
+        Route::get('classes/{classId}/equipment', [EquipmentTrackingController::class, 'getClassEquipment'])->middleware('role:admin,trainer,member');
+        Route::post('equipment-tracking/{id}/mark-in-use', [EquipmentTrackingController::class, 'markAsInUse'])->middleware('role:admin,trainer');
+        Route::post('equipment-tracking/{id}/mark-returned', [EquipmentTrackingController::class, 'markAsReturned'])->middleware('role:admin,trainer');
 
         // Reports
         Route::get('reports/revenue', [ReportController::class, 'revenue'])->middleware('role:admin');

@@ -8,7 +8,12 @@ import TrainerLayout from '@/layouts/TrainerLayout'
 // Pages - Public
 const Landing = lazy(() => import('@/pages/Landing'))
 const Login = lazy(() => import('@/pages/Login'))
+const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'))
+const ResetPassword = lazy(() => import('@/pages/ResetPassword'))
 const Register = lazy(() => import('@/pages/Register'))
+const Checkout = lazy(() => import('@/pages/Checkout'))
+const VerifyEmail = lazy(() => import('@/pages/VerifyEmail'))
+const RegistrationConfirmation = lazy(() => import('@/pages/RegistrationConfirmation'))
 const About = lazy(() => import('@/pages/About'))
 
 // Pages - Member
@@ -32,6 +37,8 @@ const TrainerDashboard = lazy(() => import('@/pages/trainer/TrainerDashboard'))
 const TrainerClasses = lazy(() => import('@/pages/trainer/TrainerClasses'))
 const TrainerMembers = lazy(() => import('@/pages/trainer/TrainerMembers'))
 const TrainerSchedules = lazy(() => import('@/pages/trainer/TrainerSchedules'))
+const AttendanceManager = lazy(() => import('@/pages/attendance/AttendanceManager'))
+const TrainerProfile = lazy(() => import('@/pages/trainer/TrainerProfile'))
 
 function RouteLoadingFallback() {
   return (
@@ -156,7 +163,12 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/about" element={<About />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/register/confirmation" element={<RegistrationConfirmation />} />
 
         {/* Member Routes */}
         <Route
@@ -189,6 +201,15 @@ export default function App() {
             <MemberRoute>
               <AttendanceHistory />
             </MemberRoute>
+          }
+        />
+
+        <Route
+          path="/trainer/attendance"
+          element={
+            <TrainerRoute>
+              <AttendanceManager />
+            </TrainerRoute>
           }
         />
 
@@ -258,6 +279,15 @@ export default function App() {
           }
         />
 
+        <Route
+          path="/admin/attendance"
+          element={
+            <AdminRoute>
+              <AttendanceManager />
+            </AdminRoute>
+          }
+        />
+
         {/* Trainer Routes */}
         <Route
           path="/trainer/dashboard"
@@ -280,6 +310,14 @@ export default function App() {
           element={
             <TrainerRoute>
               <TrainerMembers />
+            </TrainerRoute>
+          }
+        />
+        <Route
+          path="/trainer/profile"
+          element={
+            <TrainerRoute>
+              <TrainerProfile />
             </TrainerRoute>
           }
         />

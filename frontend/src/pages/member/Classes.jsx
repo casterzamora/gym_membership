@@ -30,7 +30,9 @@ export default function Classes() {
       setError('')
       
       console.log('📥 Fetching member data for user:', user?.id)
-      const memberRes = await membersAPI.get(user.id)
+      // Fetch member data - use member_id from auth payload if available, otherwise use user.id
+      const memberId = user.member_id || user.id
+      const memberRes = await membersAPI.get(memberId)
       setMemberData(memberRes.data.data)
       console.log('✅ Member data loaded:', memberRes.data.data)
       
@@ -185,7 +187,12 @@ export default function Classes() {
                   <Card className="overflow-hidden hover:border-gold/30 transition h-full">
                     <div className="flex justify-between items-start mb-4">
                       <h3 className="text-lg font-bold text-white flex-1">{fitnessClass.class_name}</h3>
-                      <Badge variant="difficulty-beginner" size="sm">New</Badge>
+                      <div className="flex flex-col items-end gap-2">
+                        {fitnessClass.is_special && (
+                          <Badge variant="difficulty-advanced" size="sm">Gold only</Badge>
+                        )}
+                        <Badge variant="difficulty-beginner" size="sm">New</Badge>
+                      </div>
                     </div>
                     
                     <div className="space-y-3 text-gray-300">
@@ -208,6 +215,15 @@ export default function Classes() {
                           {fitnessClass.trainer?.name || 'TBD'}
                         </p>
                       </div>
+
+                      {Array.isArray(fitnessClass.membership_plans) && fitnessClass.membership_plans.length > 0 && (
+                        <div className="pt-2 border-t border-gray-700">
+                          <p className="text-sm text-gray-400 mb-1">Eligible Memberships</p>
+                          <p className="font-semibold text-gold-300">
+                            {fitnessClass.membership_plans.map((plan) => plan.plan_name || plan.name).join(', ')}
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Capacity */}

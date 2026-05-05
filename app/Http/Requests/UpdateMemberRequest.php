@@ -16,9 +16,6 @@ class UpdateMemberRequest extends FormRequest
         return [
             'first_name' => 'sometimes|string|max:255',
             'last_name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|email|unique:members,email,' . $this->member->id,
-            'username' => 'sometimes|string|max:255|unique:members,username,' . $this->member->id,
-            'password_hash' => 'sometimes|string|min:8',
             'phone' => 'nullable|string|max:20',
             'date_of_birth' => 'nullable|date|before:today',
             'plan_id' => 'sometimes|exists:membership_plans,id',

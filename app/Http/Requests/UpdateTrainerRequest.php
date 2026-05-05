@@ -16,7 +16,6 @@ class UpdateTrainerRequest extends FormRequest
         return [
             'first_name' => 'sometimes|string|max:255',
             'last_name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|email|unique:trainers,email,' . $this->trainer->id,
             'phone' => 'sometimes|string|max:20',
             'specialization' => 'sometimes|string|max:255',
             'hourly_rate' => 'sometimes|numeric|min:0',

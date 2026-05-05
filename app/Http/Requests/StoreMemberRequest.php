@@ -14,14 +14,12 @@ class StoreMemberRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'user_id' => 'nullable|exists:users,id',
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'email' => 'required|email|unique:members',
-            'username' => 'required|string|max:255|unique:members',
-            'password_hash' => 'required|string|min:8',
             'phone' => 'nullable|string|max:20',
             'date_of_birth' => 'nullable|date|before:today',
-            'plan_id' => 'required|exists:membership_plans,id',
+            'plan_id' => 'nullable|exists:membership_plans,id',
             'fitness_goal' => 'nullable|string|max:255',
             'health_notes' => 'nullable|string',
             'registration_type' => 'nullable|string|default:standard',

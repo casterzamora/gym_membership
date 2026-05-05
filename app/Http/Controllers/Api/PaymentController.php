@@ -20,10 +20,15 @@ class PaymentController extends Controller
      */
     public function index(Request $request)
     {
-        $paymentsQuery = Payment::with('member', 'paymentMethod');
+        $paymentsQuery = Payment::with('member', 'user', 'paymentMethod');
 
-        if ($request->user() instanceof Member) {
-            $paymentsQuery->where('member_id', $request->user()->id);
+        // Filter by current user if they are a member
+        $currentUser = $request->user();
+        if ($currentUser && $currentUser->isMember()) {
+            $memberProfile = $currentUser->member;
+            if ($memberProfile) {
+                $paymentsQuery->where('member_id', $memberProfile->id);
+            }
         }
 
         $payments = $paymentsQuery->paginate(15);
@@ -46,8 +51,16 @@ class PaymentController extends Controller
                 return $this->error('Payment coverage overlaps with an existing payment period', null, 422);
             }
 
+            // Populate user_id from member's user_id
+            if (isset($data['member_id'])) {
+                $member = Member::find($data['member_id']);
+                if ($member && $member->user_id) {
+                    $data['user_id'] = $member->user_id;
+                }
+            }
+
             $payment = Payment::create($data);
-            return $this->success($payment->load('member', 'paymentMethod'), 'Payment recorded successfully', 201);
+            return $this->success($payment->load('member', 'user', 'paymentMethod'), 'Payment recorded successfully', 201);
         } catch (\Exception $e) {
             return $this->error('Failed to record payment: ' . $e->getMessage(), null, 500);
         }
@@ -58,11 +71,17 @@ class PaymentController extends Controller
      */
     public function show(Request $request, Payment $payment)
     {
-        if ($request->user() instanceof Member && (int) $payment->member_id !== (int) $request->user()->id) {
-            return $this->error('Forbidden: members can only access their own payments', null, 403);
+        $currentUser = $request->user();
+        
+        // Check if user is a member and can only access their own payments
+        if ($currentUser && $currentUser->isMember()) {
+            $memberProfile = $currentUser->member;
+            if ($memberProfile && (int) $payment->member_id !== (int) $memberProfile->id) {
+                return $this->error('Forbidden: members can only access their own payments', null, 403);
+            }
         }
 
-        return $this->success($payment->load('member', 'paymentMethod'), 'Payment retrieved successfully');
+        return $this->success($payment->load('member', 'user', 'paymentMethod'), 'Payment retrieved successfully');
     }
 
     /**
@@ -86,7 +105,7 @@ class PaymentController extends Controller
             }
 
             $payment->update($data);
-            return $this->success($payment->load('member', 'paymentMethod'), 'Payment updated successfully');
+            return $this->success($payment->load('member', 'user', 'paymentMethod'), 'Payment updated successfully');
         } catch (\Exception $e) {
             return $this->error('Failed to update payment: ' . $e->getMessage(), null, 500);
         }

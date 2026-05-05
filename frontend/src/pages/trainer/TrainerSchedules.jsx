@@ -30,10 +30,11 @@ const TrainerSchedules = () => {
   const [scheduleToDelete, setScheduleToDelete] = useState(null);
 
   useEffect(() => {
-    if (user?.email) {
-      fetchAllData();
+    if (user?.trainer_id) {
+      setCurrentTrainerId(user.trainer_id);
+      fetchAllData(user.trainer_id);
     }
-  }, [user?.email]);
+  }, [user?.trainer_id]);
 
   const recurrenceOptions = useMemo(
     () => [
@@ -50,13 +51,6 @@ const TrainerSchedules = () => {
     [trainerClasses]
   );
 
-  const resolveTrainerId = async () => {
-    const trainersRes = await api.trainersAPI.list();
-    const all = trainersRes?.data?.data || [];
-    const trainer = all.find((t) => t.email?.toLowerCase() === user?.email?.toLowerCase());
-    return trainer?.id || null;
-  };
-
   const normalizeListPayload = (res) => {
     const payload = res?.data?.data;
     if (Array.isArray(payload)) {
@@ -69,8 +63,41 @@ const TrainerSchedules = () => {
   };
 
   const formatTime = (value) => {
-    if (!value) return '-';
-    return String(value).slice(0, 5);
+    if (!value) return '';
+    // Extract HH:MM from either "HH:MM:SS" or "HH:MM" format
+    const timeStr = String(value).trim();
+    if (timeStr.length >= 5) {
+      return timeStr.slice(0, 5); // Returns "HH:MM"
+    }
+    return timeStr;
+  };
+
+  const formatDateForInput = (dateString) => {
+    if (!dateString) return '';
+    try {
+      // Handle ISO format dates like "2026-04-23T00:00:00.000000Z"
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        // If it's already in YYYY-MM-DD format, return as-is
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+          return dateString;
+        }
+        return '';
+      }
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch (e) {
+      console.error('Error formatting date:', dateString, e);
+      return '';
+    }
+  };
+
+  const formatDateForDisplay = (dateString) => {
+    if (!dateString) return '-';
+    const formatted = formatDateForInput(dateString);
+    return formatted || '-';
   };
 
   const getScheduleClassId = (schedule) => {
@@ -92,13 +119,14 @@ const TrainerSchedules = () => {
     return classItem?.class_name || `Class #${classId}`;
   };
 
-  const fetchAllData = async () => {
+  const fetchAllData = async (trainerId = null) => {
     try {
       setLoading(true);
-      const trainerId = await resolveTrainerId();
-      setCurrentTrainerId(trainerId);
+      console.log('📡 Fetching data for trainer ID:', trainerId || currentTrainerId);
 
-      if (!trainerId) {
+      const id = trainerId || currentTrainerId;
+      if (!id) {
+        console.warn('⚠️ No trainer ID available');
         setTrainerClasses([]);
         setSchedules([]);
         return;
@@ -110,14 +138,24 @@ const TrainerSchedules = () => {
       ]);
 
       const allClasses = normalizeListPayload(classesRes);
-      const trainerOwnedClasses = allClasses.filter((c) => Number(c.trainer_id) === Number(trainerId));
+      console.log(`📦 Loaded ${allClasses.length} classes`);
+      
+      const trainerOwnedClasses = allClasses.filter((c) => Number(c.trainer_id) === Number(id));
+      console.log(`✅ Found ${trainerOwnedClasses.length} classes for trainer ${id}`);
       setTrainerClasses(trainerOwnedClasses);
 
       const trainerClassIds = new Set(trainerOwnedClasses.map((c) => Number(c.id)));
       const allSchedules = normalizeListPayload(schedulesRes);
+      console.log(`📦 Loaded ${allSchedules.length} total schedules`);
+      
       const filteredSchedules = allSchedules.filter((s) => trainerClassIds.has(getScheduleClassId(s)));
+      console.log(`✅ Found ${filteredSchedules.length} schedules for trainer's classes`);
+      console.log('Filtered schedules:', filteredSchedules);
+      
       setSchedules(filteredSchedules);
+      console.log('✅ State updated with new schedules');
     } catch (err) {
+      console.error('❌ Failed to load data:', err);
       toast.error('Failed to load schedules');
       setTrainerClasses([]);
       setSchedules([]);
@@ -134,15 +172,33 @@ const TrainerSchedules = () => {
   };
 
   const openEditModal = (schedule) => {
+    console.log('=== OPENING EDIT MODAL ===');
+    console.log('Schedule object:', schedule);
+    console.log('Raw start_time:', schedule.start_time, '| Raw end_time:', schedule.end_time);
+    console.log('Raw class_date:', schedule.class_date);
+    
+    const classId = getScheduleClassId(schedule);
+    const formattedDate = formatDateForInput(schedule.class_date);
+    const formattedStart = formatTime(schedule.start_time);
+    const formattedEnd = formatTime(schedule.end_time);
+    
+    console.log('Formatted class_id:', classId);
+    console.log('Formatted class_date:', formattedDate);
+    console.log('Formatted start_time:', formattedStart);
+    console.log('Formatted end_time:', formattedEnd);
+    
     setEditingSchedule(schedule);
-    setFormData({
-      class_id: String(getScheduleClassId(schedule) || ''),
-      class_date: schedule.class_date || '',
-      start_time: formatTime(schedule.start_time),
-      end_time: formatTime(schedule.end_time),
+    const formattedData = {
+      class_id: String(classId || ''),
+      class_date: formattedDate,
+      start_time: formattedStart,
+      end_time: formattedEnd,
       recurrence_type: schedule.recurrence_type || '',
-      recurrence_end_date: schedule.recurrence_end_date || '',
-    });
+      recurrence_end_date: formatDateForInput(schedule.recurrence_end_date),
+    };
+    
+    console.log('Final form data to set:', formattedData);
+    setFormData(formattedData);
     setErrors({});
     setIsModalOpen(true);
   };
@@ -154,12 +210,16 @@ const TrainerSchedules = () => {
     if (!formData.start_time) nextErrors.start_time = 'Start time is required';
     if (!formData.end_time) nextErrors.end_time = 'End time is required';
 
-    if (formData.start_time && formData.end_time && formData.end_time <= formData.start_time) {
-      nextErrors.end_time = 'End time must be after start time';
+    if (formData.start_time && formData.end_time) {
+      if (formData.end_time <= formData.start_time) {
+        nextErrors.end_time = 'End time must be after start time';
+      }
     }
 
-    if (formData.recurrence_end_date && formData.class_date && formData.recurrence_end_date <= formData.class_date) {
-      nextErrors.recurrence_end_date = 'Recurrence end date must be after class date';
+    if (formData.recurrence_type && formData.recurrence_end_date) {
+      if (formData.recurrence_end_date <= formData.class_date) {
+        nextErrors.recurrence_end_date = 'Recurrence end date must be after class date';
+      }
     }
 
     setErrors(nextErrors);
@@ -167,8 +227,16 @@ const TrainerSchedules = () => {
   };
 
   const handleSave = async () => {
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      console.error('Form validation failed, errors:', errors);
+      toast.error('Please fix the form errors');
+      return;
+    }
 
+    console.log('=== SAVING SCHEDULE ===');
+    console.log('Editing?', !!editingSchedule, 'ID:', editingSchedule?.id);
+    console.log('FormData before sending:', formData);
+    
     const payload = {
       class_id: Number(formData.class_id),
       class_date: formData.class_date,
@@ -178,21 +246,54 @@ const TrainerSchedules = () => {
       recurrence_end_date: formData.recurrence_end_date || null,
     };
 
+    console.log('Payload being sent:', payload);
+
     try {
       setLoading(true);
+      let response;
+      
       if (editingSchedule) {
-        await api.schedulesAPI.update(editingSchedule.id, payload);
+        console.log('🔄 Updating schedule ID:', editingSchedule.id);
+        response = await api.schedulesAPI.update(editingSchedule.id, payload);
+        console.log('✅ Update response:', response.data);
+        console.log('Response data content:', response.data.data);
+        
+        // Verify we got schedule data back
+        if (response.data.data && response.data.data.start_time) {
+          console.log('✅ Response contains updated schedule data');
+          console.log('   Updated start_time:', response.data.data.start_time);
+          console.log('   Updated end_time:', response.data.data.end_time);
+        } else {
+          console.warn('⚠️ Response missing schedule data fields');
+        }
+        
         toast.success('Schedule updated successfully');
       } else {
-        await api.schedulesAPI.create(payload);
+        console.log('➕ Creating new schedule');
+        response = await api.schedulesAPI.create(payload);
+        console.log('✅ Create response:', response.data);
         toast.success('Schedule created successfully');
       }
+      
+      // Close modal and reset form
       setIsModalOpen(false);
       setEditingSchedule(null);
       setFormData(initialForm);
-      await fetchAllData();
+      setErrors({});
+      
+      // Refresh the list
+      console.log('🔄 Refreshing schedule list...');
+      await fetchAllData(user?.trainer_id || currentTrainerId);
+      console.log('✅ Schedule list refreshed');
     } catch (err) {
+      console.error('❌ Save error:', err.message);
+      console.error('Error response:', err.response?.data);
+      if (err.response?.data?.errors) {
+        console.error('Validation errors:', err.response.data.errors);
+        setErrors(err.response.data.errors);
+      }
       toast.error(err.response?.data?.message || 'Failed to save schedule');
+    } finally {
       setLoading(false);
     }
   };
@@ -201,13 +302,20 @@ const TrainerSchedules = () => {
     if (!scheduleToDelete) return;
     try {
       setLoading(true);
-      await api.schedulesAPI.delete(scheduleToDelete.id);
+      console.log('🗑️ Deleting schedule ID:', scheduleToDelete.id);
+      const deleteRes = await api.schedulesAPI.delete(scheduleToDelete.id);
+      console.log('✅ Delete response:', deleteRes.data);
       toast.success('Schedule deleted successfully');
       setIsConfirmOpen(false);
       setScheduleToDelete(null);
-      await fetchAllData();
+      console.log('🔄 Refreshing schedule list after delete...');
+      await fetchAllData(user?.trainer_id || currentTrainerId);
+      console.log('✅ Schedule list refreshed after delete');
     } catch (err) {
+      console.error('❌ Delete error:', err);
+      console.error('Error response:', err.response?.data);
       toast.error(err.response?.data?.message || 'Failed to delete schedule');
+    } finally {
       setLoading(false);
     }
   };
@@ -231,7 +339,7 @@ const TrainerSchedules = () => {
             </div>
             <p className="text-gray-400">Create and manage your class sessions</p>
           </div>
-          <Button onClick={openCreateModal} className="flex items-center gap-2" disabled={!currentTrainerId || trainerClasses.length === 0}>
+          <Button onClick={openCreateModal} className="flex items-center gap-2" disabled={!user?.trainer_id || trainerClasses.length === 0}>
             <Plus size={18} />
             New Schedule
           </Button>
@@ -269,7 +377,7 @@ const TrainerSchedules = () => {
                   {schedules.map((schedule) => (
                     <tr key={schedule.id} className="border-b border-gray-700 hover:bg-dark-secondary transition">
                       <td className="px-6 py-4 text-white font-medium">{getScheduleClassName(schedule)}</td>
-                      <td className="px-6 py-4 text-gray-300">{schedule.class_date || '-'}</td>
+                      <td className="px-6 py-4 text-gray-300">{formatDateForDisplay(schedule.class_date)}</td>
                       <td className="px-6 py-4 text-white">{formatTime(schedule.start_time)}</td>
                       <td className="px-6 py-4 text-white">{formatTime(schedule.end_time)}</td>
                       <td className="px-6 py-4 text-gray-300">{schedule.recurrence_type || 'One-time'}</td>

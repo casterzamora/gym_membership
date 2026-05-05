@@ -1,0 +1,23 @@
+﻿=== UPGRADE DEBUGGING ===
+
+1. Checking membership_upgrades table:
+   Records found: 0
+   No upgrade records yet
+
+2. Checking members with plan_id values:
+   - ID: 1, Name: Member1 Test, Plan: 1, End: 2026-08-06
+   - ID: 2, Name: Member2 Test, Plan: 2, End: 2026-08-06
+   - ID: 3, Name: Member3 Test, Plan: 3, End: 2026-08-06
+   - ID: 4, Name: Member4 Test, Plan: 1, End: 2026-08-06
+   - ID: 5, Name: Member5 Test, Plan: 2, End: 2026-08-06
+
+3. Checking membership_plans:
+   - ID: 1, Name: Bronze
+   - ID: 3, Name: Gold
+   - ID: 2, Name: Silver
+
+4. Checking foreign key constraints on membership_upgrades:
+   - PRIMARY: id -> .
+   - membership_upgrades_member_id_foreign: member_id -> members.id
+   - membership_upgrades_new_plan_id_foreign: new_plan_id -> membership_plans.id
+   - membership_upgrades_old_plan_id_foreign: old_plan_id -> membership_plans.id

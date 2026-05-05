@@ -15,9 +15,9 @@ class StoreEquipmentRequest extends FormRequest
     {
         return [
             'equipment_name' => 'required|string|max:255|unique:equipment',
-            'quantity' => 'required|integer|min:1|max:1000',
-            'purchase_date' => 'nullable|date',
-            'condition' => 'required|in:new,good,fair,poor',
+            'status' => 'nullable|in:Available,Maintenance,Out of Service',
+            'acquisition_date' => 'nullable|date',
+            'last_maintenance' => 'nullable|date',
         ];
     }
 }

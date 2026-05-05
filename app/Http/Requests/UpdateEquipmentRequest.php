@@ -15,9 +15,9 @@ class UpdateEquipmentRequest extends FormRequest
     {
         return [
             'equipment_name' => 'sometimes|string|max:255|unique:equipment,equipment_name,' . $this->equipment->id,
-            'quantity' => 'sometimes|integer|min:1|max:1000',
-            'purchase_date' => 'nullable|date',
-            'condition' => 'sometimes|in:new,good,fair,poor',
+            'status' => 'sometimes|in:Available,Maintenance,Out of Service',
+            'acquisition_date' => 'nullable|date',
+            'last_maintenance' => 'nullable|date',
         ];
     }
 }

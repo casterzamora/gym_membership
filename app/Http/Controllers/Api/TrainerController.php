@@ -21,15 +21,40 @@ class TrainerController extends Controller
      */
     public function index()
     {
-        $trainers = Trainer::with('certifications', 'classes')->paginate(15);
+        $trainers = Trainer::with('user', 'certifications', 'classes')->paginate(15);
         return $this->paginated($trainers, 'Trainers retrieved successfully');
+    }
+
+    /**
+     * Display a specific trainer resource.
+     */
+    public function show(Request $request, $trainer)
+    {
+        $trainerId = $trainer instanceof Trainer ? $trainer->id : $trainer;
+        $trainerModel = Trainer::find($trainerId);
+
+        if (!$trainerModel) {
+            return $this->error('Trainer not found', null, 404);
+        }
+
+        $forbidden = $this->forbidIfDifferentTrainerActor($request, $trainerModel);
+        if ($forbidden !== null) {
+            return $forbidden;
+        }
+
+        return $this->success($trainerModel->load('user', 'certifications', 'classes'), 'Trainer retrieved successfully');
     }
 
     /**
      * Aggregated workload metrics for a specific trainer.
      */
-    public function workload(Request $request, Trainer $trainer)
+    public function workload(Request $request, $trainer)
     {
+        $trainerId = $trainer instanceof Trainer ? $trainer->id : $trainer;
+        $trainer = Trainer::find($trainerId);
+        if (!$trainer) {
+            return $this->error('Trainer not found', null, 404);
+        }
         $forbidden = $this->forbidIfDifferentTrainerActor($request, $trainer);
         if ($forbidden !== null) {
             return $forbidden;
@@ -72,7 +97,7 @@ class TrainerController extends Controller
             'trainer' => [
                 'id' => $trainer->id,
                 'name' => trim($trainer->first_name . ' ' . $trainer->last_name),
-                'email' => $trainer->email,
+                'email' => $trainer->email,  // Now uses accessor
             ],
             'metrics' => [
                 'total_classes' => $totalClasses,
@@ -124,33 +149,129 @@ class TrainerController extends Controller
 
     /**
      * Store a newly created resource in storage.
+     * Creates a trainer and automatically creates/links a user account
      */
     public function store(StoreTrainerRequest $request)
     {
         try {
-            $trainer = Trainer::create($request->validated());
-            return $this->success($trainer->load('certifications', 'classes'), 'Trainer created successfully', 201);
+            $data = $request->validated();
+
+            // Prevent trainers from updating their own hourly_rate (salary) via the API.
+            $actor = $request->user();
+            if ($actor instanceof User && $actor->role === 'trainer') {
+                if (isset($data['hourly_rate'])) {
+                    unset($data['hourly_rate']);
+                }
+            }
+            
+            // If no user_id provided, create a new user for this trainer
+            if (!isset($data['user_id'])) {
+                // Create user account for trainer
+                $user = \App\Models\User::create([
+                    'name' => trim($data['first_name'] . ' ' . $data['last_name']),
+                    'first_name' => $data['first_name'],
+                    'last_name' => $data['last_name'],
+                    'email' => $data['email'],
+                    'password' => \Illuminate\Support\Facades\Hash::make($data['password']),
+                    'phone' => $data['phone'],
+                    'specialization' => $data['specialization'],
+                    'hourly_rate' => $data['hourly_rate'],
+                    'role' => 'trainer',
+                    'is_active' => true,
+                ]);
+                $data['user_id'] = $user->id;
+            }
+            
+            $trainer = Trainer::create($data);
+            return $this->success($trainer->load('certifications', 'classes', 'user'), 'Trainer created successfully', 201);
         } catch (\Exception $e) {
             return $this->error('Failed to create trainer: ' . $e->getMessage(), null, 500);
         }
     }
 
     /**
-     * Display the specified resource.
-     */
-    public function show(Trainer $trainer)
-    {
-        return $this->success($trainer->load('certifications', 'classes'), 'Trainer retrieved successfully');
-    }
-
-    /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateTrainerRequest $request, Trainer $trainer)
+    public function update(UpdateTrainerRequest $request, $trainer)
     {
         try {
-            $trainer->update($request->validated());
-            return $this->success($trainer->load('certifications', 'classes'), 'Trainer updated successfully');
+            $trainerId = $trainer instanceof Trainer ? $trainer->id : $trainer;
+            $trainerModel = Trainer::find($trainerId);
+            if (!$trainerModel) {
+                return $this->error('Trainer not found', null, 404);
+            }
+
+            $forbidden = $this->forbidIfDifferentTrainerActor($request, $trainerModel);
+            if ($forbidden !== null) {
+                return $forbidden;
+            }
+            
+            $data = $request->validated();
+            
+            // Update trainer record
+            $trainerModel->update($data);
+            
+            // Sync user profile with trainer data if user exists
+            if ($trainerModel->user_id) {
+                $userUpdateData = [];
+                if (isset($data['first_name']) || isset($data['last_name'])) {
+                    $firstName = $data['first_name'] ?? $trainerModel->user->first_name;
+                    $lastName = $data['last_name'] ?? $trainerModel->user->last_name;
+                    $userUpdateData['name'] = trim($firstName . ' ' . $lastName);
+                    if (isset($data['first_name'])) {
+                        $userUpdateData['first_name'] = $data['first_name'];
+                    }
+                    if (isset($data['last_name'])) {
+                        $userUpdateData['last_name'] = $data['last_name'];
+                    }
+                }
+                if (isset($data['phone'])) {
+                    $userUpdateData['phone'] = $data['phone'];
+                }
+                if (isset($data['specialization'])) {
+                    $userUpdateData['specialization'] = $data['specialization'];
+                }
+                if (isset($data['hourly_rate'])) {
+                    $userUpdateData['hourly_rate'] = $data['hourly_rate'];
+                }
+                
+                if (!empty($userUpdateData)) {
+                    $trainerModel->user->update($userUpdateData);
+                }
+
+                // Handle certifications array if provided (array of cert objects or ids)
+                if ($request->has('certifications')) {
+                    $certs = $request->input('certifications');
+                    if (is_array($certs)) {
+                        $attachIds = [];
+                        foreach ($certs as $c) {
+                            if (is_numeric($c)) {
+                                $attachIds[] = (int) $c;
+                                continue;
+                            }
+
+                            // Expect object with cert_name at minimum
+                            if (is_array($c) && !empty($c['cert_name'])) {
+                                $cert = \App\Models\Certification::firstOrCreate([
+                                    'cert_name' => $c['cert_name'],
+                                    'cert_number' => $c['cert_number'] ?? null,
+                                ], [
+                                    'issuing_organization' => $c['issuing_organization'] ?? null,
+                                    'issue_date' => $c['issue_date'] ?? null,
+                                    'expiry_date' => $c['expiry_date'] ?? null,
+                                ]);
+                                $attachIds[] = $cert->id;
+                            }
+                        }
+
+                        if (!empty($attachIds)) {
+                            $trainerModel->certifications()->sync($attachIds);
+                        }
+                    }
+                }
+            }
+            
+            return $this->success($trainerModel->load('certifications', 'classes', 'user'), 'Trainer updated successfully');
         } catch (\Exception $e) {
             return $this->error('Failed to update trainer: ' . $e->getMessage(), null, 500);
         }
@@ -159,13 +280,51 @@ class TrainerController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Trainer $trainer)
+    public function destroy($trainer)
     {
         try {
-            $trainer->delete();
+            $trainerId = $trainer instanceof Trainer ? $trainer->id : $trainer;
+            $trainerModel = Trainer::find($trainerId);
+            if (!$trainerModel) {
+                return $this->error('Trainer not found', null, 404);
+            }
+            
+            // Deactivate associated user account instead of deleting it
+            // This preserves audit trails and payment records
+            if ($trainerModel->user_id) {
+                $trainerModel->user->update(['is_active' => false]);
+            }
+            
+            // Delete trainer record
+            $trainerModel->delete();
             return $this->success(null, 'Trainer deleted successfully');
         } catch (\Exception $e) {
             return $this->error('Failed to delete trainer: ' . $e->getMessage(), null, 500);
+        }
+    }
+
+    /**
+     * Detach a certification from a trainer
+     */
+    public function destroyCertification(Request $request, $trainer, $cert)
+    {
+        try {
+            $trainerId = $trainer instanceof Trainer ? $trainer->id : $trainer;
+            $trainerModel = Trainer::find($trainerId);
+            if (!$trainerModel) {
+                return $this->error('Trainer not found', null, 404);
+            }
+
+            $forbidden = $this->forbidIfDifferentTrainerActor($request, $trainerModel);
+            if ($forbidden !== null) {
+                return $forbidden;
+            }
+
+            $certId = (int) $cert;
+            $trainerModel->certifications()->detach($certId);
+            return $this->success(null, 'Certification removed successfully');
+        } catch (\Exception $e) {
+            return $this->error('Failed to remove certification: ' . $e->getMessage(), null, 500);
         }
     }
 
@@ -173,8 +332,12 @@ class TrainerController extends Controller
     {
         $actor = $request->user();
 
+        // Check if the actor is a trainer role and verify they're accessing their own workload
         if ($actor instanceof User && $actor->role === 'trainer') {
-            if (strcasecmp((string) $actor->email, (string) $trainer->email) !== 0) {
+            // Get the trainer profile for this user
+            $actorTrainer = $actor->trainer;
+            
+            if (!$actorTrainer || $actorTrainer->id !== $trainer->id) {
                 return $this->error('Forbidden: trainers can only view their own workload', null, 403);
             }
         }

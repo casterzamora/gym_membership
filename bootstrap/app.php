@@ -5,6 +5,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use App\Http\Middleware\DualSanctumAuth;
 use App\Http\Middleware\EnsureMemberSelfAccess;
+use App\Http\Middleware\EnsureTrainerSelfAccess;
 use App\Http\Middleware\RequireRole;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -18,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'dual.auth' => DualSanctumAuth::class,
             'member.self' => EnsureMemberSelfAccess::class,
+            'trainer.self' => EnsureTrainerSelfAccess::class,
             'role' => RequireRole::class,
         ]);
 

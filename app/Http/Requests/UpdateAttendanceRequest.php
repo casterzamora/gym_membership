@@ -16,7 +16,7 @@ class UpdateAttendanceRequest extends FormRequest
         return [
             'attendance_status' => 'sometimes|string|in:Present,Absent,Late',
             'attendance_notes' => 'nullable|string|max:500',
-            'recorded_at' => 'nullable|datetime',
+            'recorded_at' => 'nullable|date',
         ];
     }
 }

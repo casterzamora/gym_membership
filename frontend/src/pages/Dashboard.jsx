@@ -270,7 +270,7 @@ export default function Dashboard() {
             My Profile
           </Button>
           <Button variant="secondary" size="lg" className="w-full">
-            Upgrade Plan
+            Upgrade After Expiry
           </Button>
         </motion.div>
       </div>

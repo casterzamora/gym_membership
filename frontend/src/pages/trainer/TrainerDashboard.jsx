@@ -18,27 +18,16 @@ const TrainerDashboard = () => {
   const [summaryTrendData, setSummaryTrendData] = useState([]);
 
   useEffect(() => {
-    if (user?.id) {
+    if (user?.trainer_id) {
       fetchStats();
     }
-  }, [user?.id]);
+  }, [user?.trainer_id]);
 
   const fetchStats = async () => {
     try {
       setLoading(true);
 
-      const trainersRes = await api.trainersAPI.list().catch(() => ({ data: { data: [] } }));
-      const trainers = trainersRes.data.data || [];
-      const currentTrainer = trainers.find(t => t.email?.toLowerCase() === user?.email?.toLowerCase());
-
-      if (!currentTrainer) {
-        setStats({ myClasses: 0, myStudents: 0, totalSessions: 0, avgAttendance: 0 });
-        setAttendanceStatusData([]);
-        setSummaryTrendData([]);
-        return;
-      }
-
-      const workloadRes = await api.trainersAPI.workload(currentTrainer.id);
+      const workloadRes = await api.trainersAPI.workload(user.trainer_id);
       const workload = workloadRes.data?.data || {};
       const metrics = workload.metrics || {};
       const byStatus = workload.attendance_by_status || {};

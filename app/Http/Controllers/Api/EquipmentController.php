@@ -17,8 +17,8 @@ class EquipmentController extends Controller
      */
     public function index()
     {
-        $equipment = Equipment::with('classes')->paginate(15);
-        return $this->paginated($equipment, 'Equipment retrieved successfully');
+        $equipment = Equipment::all();
+        return $this->success($equipment, 'Equipment retrieved successfully');
     }
 
     /**
@@ -28,7 +28,7 @@ class EquipmentController extends Controller
     {
         try {
             $equipment = Equipment::create($request->validated());
-            return $this->success($equipment->load('classes'), 'Equipment created successfully', 201);
+            return $this->success($equipment, 'Equipment created successfully', 201);
         } catch (\Exception $e) {
             return $this->error('Failed to create equipment: ' . $e->getMessage(), null, 500);
         }
@@ -39,7 +39,7 @@ class EquipmentController extends Controller
      */
     public function show(Equipment $equipment)
     {
-        return $this->success($equipment->load('classes'), 'Equipment retrieved successfully');
+        return $this->success($equipment, 'Equipment retrieved successfully');
     }
 
     /**
@@ -49,7 +49,7 @@ class EquipmentController extends Controller
     {
         try {
             $equipment->update($request->validated());
-            return $this->success($equipment->load('classes'), 'Equipment updated successfully');
+            return $this->success($equipment, 'Equipment updated successfully');
         } catch (\Exception $e) {
             return $this->error('Failed to update equipment: ' . $e->getMessage(), null, 500);
         }

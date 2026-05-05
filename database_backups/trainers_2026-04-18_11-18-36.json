@@ -1,0 +1,79 @@
+[
+    {
+        "id": 5,
+        "first_name": "David",
+        "last_name": "Wilson",
+        "email": "trainer4@gym.com",
+        "specialization": "Fitness",
+        "phone": "555-0104",
+        "hourly_rate": "90.00",
+        "created_at": "2026-04-06 07:39:34",
+        "updated_at": "2026-04-08 11:32:26"
+    },
+    {
+        "id": 10,
+        "first_name": "dfgdfg",
+        "last_name": "Johnson",
+        "email": "trainer1@gym.com",
+        "specialization": "fit",
+        "phone": "555-0101",
+        "hourly_rate": "60.00",
+        "created_at": "2026-04-08 11:42:55",
+        "updated_at": "2026-04-08 11:42:55"
+    },
+    {
+        "id": 11,
+        "first_name": "Test",
+        "last_name": "Trainer",
+        "email": "test195445@test.com",
+        "specialization": "Test",
+        "phone": "1234567890",
+        "hourly_rate": "100.00",
+        "created_at": "2026-04-08 11:54:46",
+        "updated_at": "2026-04-08 11:54:46"
+    },
+    {
+        "id": 12,
+        "first_name": "heyy",
+        "last_name": "Brown",
+        "email": "trainer2@gym.com",
+        "specialization": "yoga",
+        "phone": "555-0102",
+        "hourly_rate": "70.00",
+        "created_at": "2026-04-16 09:08:19",
+        "updated_at": "2026-04-16 09:08:19"
+    },
+    {
+        "id": 13,
+        "first_name": "robert",
+        "last_name": "Davis",
+        "email": "trainer3@gym.com",
+        "specialization": "hiit",
+        "phone": "555-0103",
+        "hourly_rate": "80.00",
+        "created_at": "2026-04-16 16:45:39",
+        "updated_at": "2026-04-16 16:45:55"
+    },
+    {
+        "id": 14,
+        "first_name": "robert",
+        "last_name": "Davis",
+        "email": "trainer8@gym.com",
+        "specialization": "hiit",
+        "phone": "555-0103",
+        "hourly_rate": "80.00",
+        "created_at": "2026-04-17 14:07:06",
+        "updated_at": "2026-04-17 14:07:06"
+    },
+    {
+        "id": 15,
+        "first_name": "robert",
+        "last_name": "Davis",
+        "email": "trainer17@gym.com",
+        "specialization": "hiit",
+        "phone": "555-0103",
+        "hourly_rate": "80.00",
+        "created_at": "2026-04-17 14:07:19",
+        "updated_at": "2026-04-17 14:07:19"
+    }
+]

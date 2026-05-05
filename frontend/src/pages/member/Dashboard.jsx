@@ -27,8 +27,9 @@ export default function Dashboard() {
     try {
       setLoading(true)
       
-      // Get member data
-      const memberRes = await membersAPI.get(user.id)
+      // Get member data - use member_id from auth payload if available, otherwise use user.id
+      const memberId = user.member_id || user.id
+      const memberRes = await membersAPI.get(memberId)
       setMemberData(memberRes.data.data)
 
       // Get today's class schedules
@@ -318,7 +319,7 @@ export default function Dashboard() {
             My Membership
           </Button>
           <Button variant="secondary" size="lg" className="w-full" onClick={() => navigate('/profile#membership')}>
-            Upgrade Plan
+            Upgrade After Expiry
           </Button>
         </motion.div>
       </div>

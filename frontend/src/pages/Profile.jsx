@@ -2,6 +2,7 @@ import { useState, useContext, useEffect } from 'react'
 import { AuthContext } from '@/context/AuthContext'
 import { membersAPI } from '@/services/api'
 import { useNavigate } from 'react-router-dom'
+import toast from 'react-hot-toast'
 
 export default function Profile() {
   const { user, loading: authLoading, logout } = useContext(AuthContext)
@@ -47,6 +48,51 @@ export default function Profile() {
     } catch (err) {
       console.error('Logout failed:', err)
     }
+  }
+
+  const getMembershipExpiryDate = () => {
+    const rawExpiry = memberData?.membership?.end_date || memberData?.membership_end || memberData?.membership_end_date
+    if (!rawExpiry) return null
+
+    const expiryDate = new Date(rawExpiry)
+    if (Number.isNaN(expiryDate.getTime())) return null
+
+    return expiryDate
+  }
+
+  const getDaysLeft = () => {
+    const expiryDate = getMembershipExpiryDate()
+    if (!expiryDate) return null
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const normalizedExpiry = new Date(expiryDate)
+    normalizedExpiry.setHours(0, 0, 0, 0)
+
+    const diffInDays = Math.ceil((normalizedExpiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+    return diffInDays
+  }
+
+  const canUpgradeNow = () => {
+    const expiryDate = getMembershipExpiryDate()
+    if (!expiryDate) return false
+
+    return new Date() >= expiryDate
+  }
+
+  const handleUpgradeClick = () => {
+    if (!canUpgradeNow()) {
+      const expiryDate = getMembershipExpiryDate()
+      toast.error(
+        expiryDate
+          ? `You can only upgrade once your current membership expires on ${expiryDate.toLocaleDateString()}.`
+          : 'You can only upgrade once your current membership expires.'
+      )
+      return
+    }
+
+    toast('Your membership is eligible for upgrade. Please contact the gym admin to proceed.')
   }
 
   if (authLoading || loading) {
@@ -99,9 +145,26 @@ export default function Profile() {
               <div>
                 <div className="text-gold-500 text-sm font-bold mb-1">RENEWAL DATE</div>
                 <div className="text-white">
-                  {memberData?.membership?.end_date ? new Date(memberData.membership.end_date).toLocaleDateString() : 'N/A'}
+                  {getMembershipExpiryDate() ? getMembershipExpiryDate().toLocaleDateString() : 'N/A'}
                 </div>
               </div>
+              <div>
+                <div className="text-gold-500 text-sm font-bold mb-1">DAYS LEFT</div>
+                <div className="text-white">
+                  {getDaysLeft() === null
+                    ? 'N/A'
+                    : getDaysLeft() > 0
+                      ? `${getDaysLeft()} day${getDaysLeft() === 1 ? '' : 's'} left`
+                      : getDaysLeft() === 0
+                        ? 'Expires today'
+                        : `Expired ${Math.abs(getDaysLeft())} day${Math.abs(getDaysLeft()) === 1 ? '' : 's'} ago`}
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 p-4 rounded-lg border border-amber-400/30 bg-amber-500/10 text-sm text-amber-100">
+              {canUpgradeNow()
+                ? 'Your membership has expired, so you can request an upgrade now.'
+                : 'You can only upgrade once your current membership expires.'}
             </div>
           </div>
 
@@ -132,8 +195,11 @@ export default function Profile() {
 
           {/* Actions */}
           <div className="flex gap-4">
-            <button className="flex-1 px-4 py-3 bg-gold-600 text-black font-bold rounded hover:bg-gold-500 transition">
-              Upgrade Plan
+            <button
+              onClick={handleUpgradeClick}
+              className="flex-1 px-4 py-3 bg-gold-600 text-black font-bold rounded hover:bg-gold-500 transition"
+            >
+              Upgrade After Expiry
             </button>
             <button
               onClick={handleLogout}
@@ -142,6 +208,9 @@ export default function Profile() {
               Sign Out
             </button>
           </div>
+          <p className="mt-3 text-sm text-gray-400">
+            You can only upgrade once your current membership expires.
+          </p>
         </div>
       </div>
     </div>

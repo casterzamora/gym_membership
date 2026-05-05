@@ -25,10 +25,16 @@ const EquipmentManagement = () => {
   const fetchEquipment = async () => {
     try {
       setLoading(true);
-      const response = await api.equipmentAPI?.list?.() || { data: { data: [] } };
-      setEquipment(response.data?.data || response.data || []);
+      const response = await api.equipmentAPI.list();
+      console.log('Equipment API response:', response);
+      console.log('Response data:', response.data);
+      const equipmentData = response.data?.data || response.data || [];
+      console.log('Parsed equipment:', equipmentData);
+      setEquipment(equipmentData);
     } catch (err) {
+      console.error('Failed to load equipment:', err);
       toast.error('Failed to load equipment');
+      setEquipment([]);
     } finally {
       setLoading(false);
     }
@@ -72,17 +78,24 @@ const EquipmentManagement = () => {
 
     try {
       setLoading(true);
+      console.log('Submitting equipment data:', formData);
       if (editingItem) {
-        await api.equipmentAPI?.update?.(editingItem.id, formData);
+        console.log('Updating equipment:', editingItem.id);
+        await api.equipmentAPI.update(editingItem.id, formData);
         toast.success('Equipment updated successfully');
       } else {
-        await api.equipmentAPI?.create?.(formData);
+        console.log('Creating new equipment');
+        const response = await api.equipmentAPI.create(formData);
+        console.log('Equipment create response:', response);
         toast.success('Equipment added successfully');
       }
       handleCloseModal();
-      fetchEquipment();
+      await fetchEquipment();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Operation failed');
+      console.error('Submit error:', err);
+      console.error('Error response:', err.response?.data);
+      const errorMsg = err.response?.data?.message || err.message || 'Operation failed';
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
