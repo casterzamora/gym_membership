@@ -9,6 +9,9 @@ use App\Models\Attendance;
 use App\Models\ClassSchedule;
 use App\Models\Trainer;
 use App\Models\User;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Hash;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 
@@ -166,16 +169,17 @@ class TrainerController extends Controller
             
             // If no user_id provided, create a new user for this trainer
             if (!isset($data['user_id'])) {
-                // Create user account for trainer
+                // Create user account for trainer with default password "password"
+                // Trainer can change their password after first login
                 $user = \App\Models\User::create([
                     'name' => trim($data['first_name'] . ' ' . $data['last_name']),
                     'first_name' => $data['first_name'],
                     'last_name' => $data['last_name'],
                     'email' => $data['email'],
-                    'password' => \Illuminate\Support\Facades\Hash::make($data['password']),
-                    'phone' => $data['phone'],
-                    'specialization' => $data['specialization'],
-                    'hourly_rate' => $data['hourly_rate'],
+                    'password' => \Illuminate\Support\Facades\Hash::make('password'),
+                    'phone' => $data['phone'] ?? null,
+                    'specialization' => $data['specialization'] ?? null,
+                    'hourly_rate' => $data['hourly_rate'] ?? 0,
                     'role' => 'trainer',
                     'is_active' => true,
                 ]);
@@ -325,6 +329,90 @@ class TrainerController extends Controller
             return $this->success(null, 'Certification removed successfully');
         } catch (\Exception $e) {
             return $this->error('Failed to remove certification: ' . $e->getMessage(), null, 500);
+        }
+    }
+
+    /**
+     * Generate and return a temporary password for a trainer.
+     * Admin-only endpoint for resetting trainer passwords.
+     */
+    public function resetPassword(Request $request, $trainer)
+    {
+        try {
+            $trainerId = $trainer instanceof Trainer ? $trainer->id : $trainer;
+            $trainerModel = Trainer::find($trainerId);
+            
+            if (!$trainerModel) {
+                return $this->error('Trainer not found', null, 404);
+            }
+
+            // Generate a temporary 12-character password
+            $tempPassword = Str::random(12);
+            
+            // Update the user's password
+            if ($trainerModel->user_id) {
+                $trainerModel->user->update([
+                    'password' => \Illuminate\Support\Facades\Hash::make($tempPassword),
+                ]);
+            }
+            
+            return $this->success(
+                ['temporary_password' => $tempPassword],
+                'Temporary password generated. Share this with the trainer.',
+                200
+            );
+        } catch (\Exception $e) {
+            return $this->error('Failed to reset password: ' . $e->getMessage(), null, 500);
+        }
+    }
+
+    /**
+     * Change password for a trainer (trainer or admin only)
+     */
+    public function changePassword(Request $request, $trainer)
+    {
+        try {
+            $trainerId = $trainer instanceof Trainer ? $trainer->id : $trainer;
+            $trainerModel = Trainer::find($trainerId);
+            
+            if (!$trainerModel) {
+                return $this->error('Trainer not found', null, 404);
+            }
+
+            // Check permissions - trainer can only change their own password, admin can change any
+            $actor = $request->user();
+            if ($actor instanceof User && $actor->role === 'trainer') {
+                $actorTrainer = $actor->trainer;
+                if (!$actorTrainer || $actorTrainer->id !== $trainerModel->id) {
+                    return $this->error('Forbidden: trainers can only change their own password', null, 403);
+                }
+            }
+
+            // Validate request
+            $validated = $request->validate([
+                'current_password' => 'required_if:actor_role,trainer|string',  // Only required if trainer (not admin)
+                'new_password' => 'required|string|min:8|confirmed',
+            ]);
+
+            // If trainer is changing their own password, verify current password
+            if ($actor instanceof User && $actor->role === 'trainer') {
+                if (!Hash::check($validated['current_password'], $trainerModel->user->password)) {
+                    return $this->error('Current password is incorrect', null, 401);
+                }
+            }
+
+            // Update password
+            if ($trainerModel->user_id) {
+                $trainerModel->user->update([
+                    'password' => Hash::make($validated['new_password']),
+                ]);
+            }
+            
+            return $this->success(null, 'Password changed successfully');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return $this->error('Validation error', $e->errors(), 422);
+        } catch (\Exception $e) {
+            return $this->error('Failed to change password: ' . $e->getMessage(), null, 500);
         }
     }
 

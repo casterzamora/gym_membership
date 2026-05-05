@@ -16,10 +16,7 @@ return new class extends Migration
             Schema::dropIfExists('equipment_usage');
         }
 
-        // Drop class_equipment table (has FK to equipment and fitness_classes)
-        if (Schema::hasTable('class_equipment')) {
-            Schema::dropIfExists('class_equipment');
-        }
+        // Keep class_equipment because the app still uses it for class/equipment mapping.
     }
 
     /**

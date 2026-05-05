@@ -21,7 +21,9 @@ class StoreTrainerRequest extends FormRequest
             'specialization' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
             'hourly_rate' => 'required|numeric|min:0',
-            'password' => 'required|string|min:8',
+            
+            // Password is now set server-side to 'password', so it's optional here
+            'password' => 'sometimes|string|min:8',
             
             // Optional: if user_id provided, use existing user
             'user_id' => 'sometimes|exists:users,id',

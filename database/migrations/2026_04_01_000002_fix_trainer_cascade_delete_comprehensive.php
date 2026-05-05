@@ -11,7 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        if (Schema::getConnection()->getDriverName() === 'mysql') {
+            DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        }
+
+        // Migration uses MySQL-specific ALTER TABLE statements; skip on other drivers
+        if (Schema::getConnection()->getDriverName() !== 'mysql') {
+            if (Schema::getConnection()->getDriverName() === 'mysql') {
+                DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            }
+            return;
+        }
 
         try {
             // First, make sure user_id is nullable so trainers don't need users
@@ -67,7 +77,9 @@ return new class extends Migration
             ');
 
         } finally {
-            DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            if (Schema::getConnection()->getDriverName() === 'mysql') {
+                DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            }
         }
     }
 
@@ -76,7 +88,17 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        if (Schema::getConnection()->getDriverName() === 'mysql') {
+            DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        }
+
+        // Skip MySQL-specific revert steps on non-mysql drivers
+        if (Schema::getConnection()->getDriverName() !== 'mysql') {
+            if (Schema::getConnection()->getDriverName() === 'mysql') {
+                DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            }
+            return;
+        }
 
         try {
             // Drop the cascade delete constraints
@@ -99,7 +121,9 @@ return new class extends Migration
             ');
 
         } finally {
-            DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            if (Schema::getConnection()->getDriverName() === 'mysql') {
+                DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            }
         }
     }
 };

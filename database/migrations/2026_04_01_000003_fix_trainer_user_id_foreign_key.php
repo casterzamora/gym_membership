@@ -10,7 +10,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        if (Schema::getConnection()->getDriverName() === 'mysql') {
+            DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        }
+
+        // Skip entirely on non-mysql drivers
+        if (Schema::getConnection()->getDriverName() !== 'mysql') {
+            if (Schema::getConnection()->getDriverName() === 'mysql') {
+                DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            }
+            return;
+        }
 
         try {
             $database = DB::getDatabaseName();
@@ -37,7 +47,9 @@ return new class extends Migration
             ');
 
         } finally {
-            DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            if (Schema::getConnection()->getDriverName() === 'mysql') {
+                DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            }
         }
     }
 
@@ -46,7 +58,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        if (Schema::getConnection()->getDriverName() === 'mysql') {
+            DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        }
 
         try {
             // Drop the SET NULL constraint
@@ -61,7 +75,9 @@ return new class extends Migration
             ');
 
         } finally {
-            DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            if (Schema::getConnection()->getDriverName() === 'mysql') {
+                DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            }
         }
     }
 };

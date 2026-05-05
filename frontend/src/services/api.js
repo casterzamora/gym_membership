@@ -97,6 +97,8 @@ export const trainersAPI = {
   update: (id, data) => api.put(`/v1/trainers/${id}`, data),
   delete: (id) => api.delete(`/v1/trainers/${id}`),
   removeCertification: (trainerId, certId) => api.delete(`/v1/trainers/${trainerId}/certifications/${certId}`),
+  resetPassword: (id) => api.post(`/v1/trainers/${id}/reset-password`),
+  changePassword: (id, data) => api.post(`/v1/trainers/${id}/change-password`, data),
 }
 
 export const equipmentAPI = {

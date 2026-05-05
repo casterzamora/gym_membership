@@ -16,6 +16,11 @@ return new class extends Migration
             if (!Schema::hasColumn('equipment_tracking', 'returned_at')) {
                 $table->timestamp('returned_at')->nullable()->after('used_at');
             }
+
+            // Add user_id if not exists (some environments have this column missing)
+            if (!Schema::hasColumn('equipment_tracking', 'user_id')) {
+                $table->unsignedBigInteger('user_id')->nullable()->after('equipment_id');
+            }
             
             // Add assigned_by if not exists
             if (!Schema::hasColumn('equipment_tracking', 'assigned_by')) {
@@ -77,6 +82,11 @@ return new class extends Migration
      */
     private function addForeignKeyIfNotExists($table, $column): void
     {
+        // Only add MySQL-style foreign keys when the connection driver supports them
+        if (Schema::getConnection()->getDriverName() !== 'mysql') {
+            return;
+        }
+
         if (!$this->foreignKeyExists('equipment_tracking', $column)) {
             $table->foreign($column)
                 ->references('id')->on('users')
@@ -89,6 +99,10 @@ return new class extends Migration
      */
     private function foreignKeyExists($table, $column): bool
     {
+        if (Schema::getConnection()->getDriverName() !== 'mysql') {
+            return false;
+        }
+
         $keyInfo = \Illuminate\Support\Facades\DB::table('INFORMATION_SCHEMA.KEY_COLUMN_USAGE')
             ->where('TABLE_NAME', $table)
             ->where('COLUMN_NAME', $column)
@@ -103,6 +117,10 @@ return new class extends Migration
      */
     private function indexExists($table, $indexName): bool
     {
+        if (Schema::getConnection()->getDriverName() !== 'mysql') {
+            return false;
+        }
+
         $indexInfo = \Illuminate\Support\Facades\DB::table('INFORMATION_SCHEMA.STATISTICS')
             ->where('TABLE_NAME', $table)
             ->where('INDEX_NAME', $indexName)

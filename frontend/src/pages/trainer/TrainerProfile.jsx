@@ -12,6 +12,9 @@ const TrainerProfile = () => {
   const [certs, setCerts] = useState([])
   const [isCertOpen, setIsCertOpen] = useState(false)
   const [certForm, setCertForm] = useState({ cert_name: '', issuing_organization: '', cert_number: '', issue_date: '', expiry_date: '' })
+  const [isPasswordOpen, setIsPasswordOpen] = useState(false)
+  const [passwordForm, setPasswordForm] = useState({ current_password: '', new_password: '', new_password_confirmation: '' })
+  const [passwordLoading, setPasswordLoading] = useState(false)
 
   useEffect(() => {
     if (user?.trainer_id) fetchTrainer()
@@ -88,6 +91,32 @@ const TrainerProfile = () => {
     }
   }
 
+  const handleChangePassword = async () => {
+    if (passwordForm.new_password !== passwordForm.new_password_confirmation) {
+      toast.error('New passwords do not match')
+      return
+    }
+    if (passwordForm.new_password.length < 8) {
+      toast.error('Password must be at least 8 characters')
+      return
+    }
+    try {
+      setPasswordLoading(true)
+      await api.trainersAPI.changePassword(trainer.id, {
+        current_password: passwordForm.current_password,
+        new_password: passwordForm.new_password,
+        new_password_confirmation: passwordForm.new_password_confirmation
+      })
+      toast.success('Password changed successfully')
+      setIsPasswordOpen(false)
+      setPasswordForm({ current_password: '', new_password: '', new_password_confirmation: '' })
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed to change password')
+    } finally {
+      setPasswordLoading(false)
+    }
+  }
+
   return (
     <div className="pt-20 min-h-screen bg-dark-bg pb-12">
       <div className="max-w-3xl mx-auto px-4 py-8">
@@ -102,6 +131,17 @@ const TrainerProfile = () => {
             <Button onClick={handleSubmit}>Save</Button>
           </div>
         </Card>
+
+        {/* Change Password */}
+        <div className="mt-6">
+          <h2 className="text-xl font-bold text-white mb-3">Security</h2>
+          <Card>
+            <div className="p-6">
+              <p className="text-gray-300 mb-4">Manage your account security and change your password.</p>
+              <Button onClick={() => setIsPasswordOpen(true)} className="bg-amber-600 hover:bg-amber-700">Change Password</Button>
+            </div>
+          </Card>
+        </div>
 
         {/* Certifications */}
         <div className="mt-6">
@@ -136,6 +176,12 @@ const TrainerProfile = () => {
           <FormInput label="Certificate Number" value={certForm.cert_number} onChange={(e) => setCertForm({ ...certForm, cert_number: e.target.value })} />
           <FormInput label="Issue Date" type="date" value={certForm.issue_date} onChange={(e) => setCertForm({ ...certForm, issue_date: e.target.value })} />
           <FormInput label="Expiry Date" type="date" value={certForm.expiry_date} onChange={(e) => setCertForm({ ...certForm, expiry_date: e.target.value })} />
+        </FormModal>
+
+        <FormModal isOpen={isPasswordOpen} title="Change Password" onClose={() => { setIsPasswordOpen(false); setPasswordForm({ current_password: '', new_password: '', new_password_confirmation: '' }) }} onSubmit={handleChangePassword} submitLabel="Change Password" loading={passwordLoading}>
+          <FormInput label="Current Password" type="password" value={passwordForm.current_password} onChange={(e) => setPasswordForm({ ...passwordForm, current_password: e.target.value })} required />
+          <FormInput label="New Password" type="password" value={passwordForm.new_password} onChange={(e) => setPasswordForm({ ...passwordForm, new_password: e.target.value })} placeholder="Minimum 8 characters" required />
+          <FormInput label="Confirm New Password" type="password" value={passwordForm.new_password_confirmation} onChange={(e) => setPasswordForm({ ...passwordForm, new_password_confirmation: e.target.value })} placeholder="Minimum 8 characters" required />
         </FormModal>
       </div>
     </div>

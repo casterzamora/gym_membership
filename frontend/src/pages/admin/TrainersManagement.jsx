@@ -84,6 +84,11 @@ const TrainersManagement = () => {
     setErrors({});
   };
 
+  const handleCopyPassword = () => {
+    navigator.clipboard.writeText('password');
+    toast.success('Default password copied: "password"');
+  };
+
   const validateForm = () => {
     const newErrors = {};
     if (!formData.first_name.trim()) newErrors.first_name = 'First name is required';
@@ -93,12 +98,6 @@ const TrainersManagement = () => {
     if (!formData.specialization.trim()) newErrors.specialization = 'Specialization is required';
     if (!formData.phone.trim()) newErrors.phone = 'Phone is required';
     if (!formData.hourly_rate || formData.hourly_rate <= 0) newErrors.hourly_rate = 'Valid hourly rate is required';
-    
-    // Password only required on create (not edit)
-    if (!editingTrainer) {
-      if (!formData.password) newErrors.password = 'Password is required';
-      if (formData.password && formData.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
-    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -113,11 +112,16 @@ const TrainersManagement = () => {
       console.log('Submitting trainer data:', formData);
       if (editingTrainer) {
         console.log('Updating trainer:', editingTrainer.id);
-        await api.trainersAPI.update(editingTrainer.id, formData);
+        // Don't send password field when editing (it's handled separately via change-password)
+        const { password, ...updateData } = formData;
+        await api.trainersAPI.update(editingTrainer.id, updateData);
         toast.success('Trainer updated successfully');
       } else {
         console.log('Creating new trainer');
-        await api.trainersAPI.create(formData);
+        // Don't send password field when creating (backend uses default "password")
+        const { password, ...createData } = formData;
+        console.log('Sending to API:', createData);
+        await api.trainersAPI.create(createData);
         toast.success('Trainer created successfully');
       }
       handleCloseModal();
@@ -260,15 +264,18 @@ const TrainersManagement = () => {
           required
         />
         {!editingTrainer && (
-          <FormInput
-            label="Password"
-            type="password"
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            error={errors.password}
-            placeholder="Minimum 8 characters"
-            required
-          />
+          <div className="bg-blue-900/30 border border-blue-700 rounded px-3 py-2">
+            <p className="text-xs text-blue-400">
+              ℹ️ Default password will be set to "<strong>password</strong>". The trainer can change it after logging in.
+            </p>
+          </div>
+        )}
+        {editingTrainer && (
+          <div className="bg-blue-900/30 border border-blue-700 rounded px-3 py-2">
+            <p className="text-xs text-blue-400">
+              ℹ️ To reset this trainer's password to "password", use the admin reset function.
+            </p>
+          </div>
         )}
       </FormModal>
 

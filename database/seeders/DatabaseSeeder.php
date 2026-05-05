@@ -14,7 +14,7 @@ use App\Models\ClassEquipment;
 use App\Models\Attendance;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
-use App\Models\EquipmentUsage;
+use App\Models\EquipmentTracking;
 use App\Models\MembershipUpgrade;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
@@ -64,23 +64,35 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Gold', 'price' => 1500, 'duration' => 3, 'classes' => 999, 'description' => 'Premium membership'],
         ];
         foreach ($planData as $data) {
-            $plans[] = MembershipPlan::create([
-                'plan_name' => $data['name'],
-                'price' => $data['price'],
-                'duration_months' => $data['duration'],
-                'description' => $data['description'],
-                'max_classes_per_week' => $data['classes'],
-            ]);
+            $plans[] = MembershipPlan::updateOrCreate(
+                ['plan_name' => $data['name']],
+                [
+                    'price' => $data['price'],
+                    'duration_months' => $data['duration'],
+                    'description' => $data['description'],
+                    'max_classes_per_week' => $data['classes'],
+                ]
+            );
         }
 
-        // Create 5 trainers (standalone, no user relationship)
+        // Create 5 trainers with linked user accounts
         $trainers = [];
         foreach (['John Smith', 'Sarah Johnson', 'Mike Brown', 'Emma Davis', 'David Wilson'] as $i => $name) {
             [$first, $last] = explode(' ', $name);
+            $trainerUser = User::firstOrCreate(
+                ['email' => "trainer$i@gym.com"],
+                [
+                    'name' => trim($first . ' ' . $last),
+                    'password' => Hash::make('password'),
+                    'role' => 'trainer',
+                    'email_verified_at' => now(),
+                ]
+            );
+
             $trainers[] = Trainer::create([
+                'user_id' => $trainerUser->id,
                 'first_name' => $first,
                 'last_name' => $last,
-                'email' => "trainer$i@gym.com",
                 'specialization' => 'Fitness',
                 'phone' => "555-010$i",
             ]);
@@ -117,7 +129,7 @@ class DatabaseSeeder extends Seeder
         }
 
         // Allow all membership plans to access all seeded classes by default.
-        $planIds = $plans->pluck('id')->all();
+        $planIds = array_map(fn ($plan) => $plan->id, $plans);
         foreach ($classes as $class) {
             $class->membershipPlans()->sync($planIds);
         }
@@ -143,15 +155,23 @@ class DatabaseSeeder extends Seeder
             $class->equipment()->attach($equipmentIds);
         }
 
-        // Create 20 members (standalone, no user relationship)
+        // Create 20 members with linked user accounts
         $members = [];
         for ($i = 1; $i <= 20; $i++) {
+            $memberUser = User::firstOrCreate(
+                ['email' => "member$i@gym.com"],
+                [
+                    'name' => "Member$i Test",
+                    'password' => Hash::make('password'),
+                    'role' => 'member',
+                    'email_verified_at' => now(),
+                ]
+            );
+
             $members[] = Member::create([
+                'user_id' => $memberUser->id,
                 'first_name' => "Member$i",
                 'last_name' => 'Test',
-                'email' => "member$i@gym.com",
-                'username' => "member$i",
-                'password_hash' => Hash::make('password'),
                 'phone' => "555-010$i",
                 'date_of_birth' => now()->subYears(25 + $i),
                 'plan_id' => $plans[($i - 1) % count($plans)]->id,
@@ -164,23 +184,34 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        // Create demo member for testing
-        Member::create([
-            'first_name' => 'Demo',
-            'last_name' => 'User',
-            'email' => 'demo@gym.com',
-            'username' => 'demo',
-            'password_hash' => Hash::make('password'),
-            'phone' => '555-0000',
-            'date_of_birth' => now()->subYears(30),
-            'plan_id' => $plans[0]->id,
-            'fitness_goal' => 'General Fitness',
-            'health_notes' => 'No restrictions',
-            'registration_type' => 'standard',
-            'membership_start' => now(),
-            'membership_end' => now()->addMonths(3),
-            'membership_status' => 'active',
-        ]);
+        // Create a loginable demo member for testing
+        $demoUser = User::firstOrCreate(
+            ['email' => 'demo@gym.com'],
+            [
+                'name' => 'Demo User',
+                'password' => Hash::make('password'),
+                'role' => 'member',
+                'is_active' => true,
+                'email_verified_at' => now(),
+            ]
+        );
+
+        Member::updateOrCreate(
+            ['user_id' => $demoUser->id],
+            [
+                'first_name' => 'Demo',
+                'last_name' => 'User',
+                'phone' => '555-0000',
+                'date_of_birth' => now()->subYears(30),
+                'plan_id' => $plans[0]->id,
+                'fitness_goal' => 'General Fitness',
+                'health_notes' => 'No restrictions',
+                'registration_type' => 'standard',
+                'membership_start' => now(),
+                'membership_end' => now()->addMonths(3),
+                'membership_status' => 'active',
+            ]
+        );
 
         // Create 16 class schedules  
         $schedules = [];
@@ -233,10 +264,12 @@ class DatabaseSeeder extends Seeder
 
         // Create 10 equipment usage records
         foreach (array_slice($schedules, 0, 10) as $schedule) {
-            EquipmentUsage::create([
+            EquipmentTracking::create([
+                'class_id' => $schedule->class_id,
                 'equipment_id' => $equipment[array_rand($equipment)]->id,
-                'schedule_id' => $schedule->id,
-                'usage_duration' => rand(30, 120),
+                'quantity' => rand(1, 3),
+                'status' => 'required',
+                'notes' => 'Seeded equipment assignment',
             ]);
         }
 

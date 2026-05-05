@@ -10,6 +10,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
+
         $database = DB::getDatabaseName();
 
         $exists = DB::selectOne(
@@ -38,6 +42,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
+
         $database = DB::getDatabaseName();
 
         $exists = DB::selectOne(

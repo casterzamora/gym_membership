@@ -14,16 +14,19 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasColumn('trainers', 'user_id')) {
+            return;
+        }
+
         Schema::table('trainers', function (Blueprint $table) {
-            // Add user_id column if it doesn't exist
-            if (!Schema::hasColumn('trainers', 'user_id')) {
-                $table->foreignId('user_id')
-                    ->nullable()
-                    ->after('id')
-                    ->constrained('users')
-                    ->onDelete('cascade')
-                    ->index();
-            }
+            $table->unsignedBigInteger('user_id')
+                ->nullable()
+                ->after('id');
+
+            $table->foreign('user_id', 'trainers_user_id_foreign')
+                ->references('id')
+                ->on('users')
+                ->nullOnDelete();
         });
     }
 
@@ -34,7 +37,7 @@ return new class extends Migration
     {
         Schema::table('trainers', function (Blueprint $table) {
             if (Schema::hasColumn('trainers', 'user_id')) {
-                $table->dropForeignKey(['user_id']);
+                $table->dropForeign('trainers_user_id_foreign');
                 $table->dropColumn('user_id');
             }
         });

@@ -76,6 +76,8 @@ Route::prefix('v1')->group(function () {
         Route::post('trainers/{trainer}/certifications', [TrainerController::class, 'update'])->middleware(['role:admin,trainer', 'trainer.self']);
         Route::delete('trainers/{trainer}/certifications/{cert}', [TrainerController::class, 'destroyCertification'])->middleware(['role:admin,trainer', 'trainer.self']);
         Route::delete('trainers/{trainer}', [TrainerController::class, 'destroy'])->middleware('role:admin');
+        Route::post('trainers/{trainer}/reset-password', [TrainerController::class, 'resetPassword'])->middleware('role:admin');
+        Route::post('trainers/{trainer}/change-password', [TrainerController::class, 'changePassword'])->middleware(['role:admin,trainer', 'trainer.self']);
 
         // Fitness Classes (protected write operations)
         Route::get('classes', [FitnessClassController::class, 'index']);

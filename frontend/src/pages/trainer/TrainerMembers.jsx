@@ -68,8 +68,41 @@ const TrainerMembers = () => {
         const res = await api.request.get('/v1/schedules', { params: { class_id: classId } });
         if (!mounted) return;
         const payload = res?.data?.data || [];
-        // Filter for upcoming schedules (server expects class_date >= today for check-in)
-        const upcoming = payload.filter(s => new Date(s.class_date) >= new Date(new Date().toDateString()));
+        
+        // Get today's date at start of day
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Filter for upcoming schedules only (class_date >= today) and remove duplicates
+        const upcomingMap = new Map();
+        payload.forEach(s => {
+          const scheduleDate = new Date(s.class_date);
+          
+          // Skip past schedules
+          if (scheduleDate < today) {
+            return;
+          }
+          
+          // Use (class_date + start_time) as unique key to avoid duplicates
+          const key = `${s.class_date}|${s.start_time}`;
+          
+          // Keep only first occurrence of each schedule
+          if (!upcomingMap.has(key)) {
+            upcomingMap.set(key, s);
+          }
+        });
+        
+        // Convert to array and sort by date and time
+        const upcoming = Array.from(upcomingMap.values()).sort((a, b) => {
+          const dateA = new Date(a.class_date);
+          const dateB = new Date(b.class_date);
+          if (dateA.getTime() !== dateB.getTime()) {
+            return dateA.getTime() - dateB.getTime();
+          }
+          // If same date, sort by start_time
+          return (a.start_time || '').localeCompare(b.start_time || '');
+        });
+        
         setScheduleOptions(upcoming);
         setSelectedSchedule(upcoming.length ? String(upcoming[0].id) : '');
       } catch (e) {
@@ -239,25 +272,19 @@ const TrainerMembers = () => {
           </Card>
         </div>
 
-        {!isSuggesting && filteredMembers.length === 0 && searchTerm.trim().length === 0 && (
+        {/* Members Table */}
+        {filteredMembers.length > 0 ? (
           <Card>
-            <div className="p-6 text-center">
-              <p className="text-gray-400">No students found for your current class assignments.</p>
-            </div>
-          </Card>
-        )}
-
-        {!isSuggesting && !(filteredMembers.length === 0 && searchTerm.trim().length === 0) && (
-          <Card className="overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gold-600/20 bg-dark-secondary">
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gold-300">Member Name</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gold-300">Email</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gold-300">Phone</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gold-300">Plan</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gold-300">Attendances</th>
+                <thead className="bg-dark-secondary">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gold-400">Name</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gold-400">Email</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gold-400">Phone</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gold-400">Plan</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gold-400">Attendances</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gold-400">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -268,23 +295,27 @@ const TrainerMembers = () => {
                       <td className="px-6 py-4 text-gray-300 text-sm">{member.phone || '-'}</td>
                       <td className="px-6 py-4 text-gray-300 text-sm">{member.plan?.plan_name || member.plan_name || '-'}</td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <span className="inline-block bg-green-500/20 text-green-300 px-3 py-1 rounded font-bold border border-green-500/30">
-                            {Array.isArray(member.attendances) ? member.attendances.length : 0}
-                          </span>
-                          <button
-                            onClick={() => handleUnenroll(member)}
-                            className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-500"
-                          >
-                            Unenroll
-                          </button>
-                        </div>
+                        <span className="inline-block bg-green-500/20 text-green-300 px-3 py-1 rounded font-bold border border-green-500/30">
+                          {Array.isArray(member.attendances) ? member.attendances.length : 0}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => handleUnenroll(member)}
+                          className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-500"
+                        >
+                          Unenroll
+                        </button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+          </Card>
+        ) : (
+          <Card>
+            <p className="text-gray-400">No students enrolled yet. Search for members and add them above.</p>
           </Card>
         )}
 
