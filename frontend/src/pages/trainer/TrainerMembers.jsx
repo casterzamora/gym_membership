@@ -69,6 +69,8 @@ const TrainerMembers = () => {
         if (!mounted) return;
         const payload = res?.data?.data || [];
         
+        console.log('[Schedules] Fetched for class_id:', classId, 'Got:', payload.length, 'schedules', payload);
+        
         // Get today's date at start of day
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -336,6 +338,14 @@ const TrainerMembers = () => {
             }
             try {
               setLoading(true);
+              console.log('[Enroll] Attempting enrollment:', { 
+                memberId: enrollMember.id, 
+                classId: enrollClassId, 
+                scheduleId: selectedSchedule,
+                availableClasses: trainerClasses.map(c => ({ id: c.id, name: c.class_name, trainerId: c.trainer_id })),
+                userTrainerId: user?.trainer_id
+              });
+              
               // If a specific schedule was selected, send schedule_id to target it directly.
               if (selectedSchedule) {
                 await api.attendanceAPI.checkIn({ member_id: enrollMember.id, schedule_id: Number(selectedSchedule) });
